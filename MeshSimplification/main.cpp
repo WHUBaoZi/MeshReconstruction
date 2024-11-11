@@ -75,6 +75,7 @@ int main(int argc, char* argv[])
 #pragma endregion
 
 	std::vector<Mesh> sliceMeshes(slicesNum);
+	std::vector<std::vector<Polygon2>> polygons(slicesNum);
 	double sliceSpace = (maxZ - minZ) / (slicesNum + 1);
 
 #pragma omp parallel for
@@ -103,7 +104,6 @@ int main(int argc, char* argv[])
 
 		std::set<vertex_descriptor> visitedVertices;
 		std::map<vertex_descriptor, vertex_descriptor> v2v;
-		std::vector<std::vector<Polygon2>> polygons(slicesNum);
 		std::set<halfedge_descriptor> visitedEdges;
 
 		for (const auto& halfedge : meshCopy.halfedges())
@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 				halfedge_descriptor currentHalfedge = halfedge;
 				do
 				{
-					vertex_descriptor vertex = meshCopy.target(halfedge);
+					vertex_descriptor vertex = meshCopy.target(currentHalfedge);
 					Point3 point3 = meshCopy.point(vertex);
 					polygon.push_back(Point2(point3.x(), point3.y()));
 					visitedEdges.insert(currentHalfedge);
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 					visitedVertices.insert(source);
 					visitedVertices.insert(target);
 
-					for (const auto h : CGAL::halfedges_around_target(halfedge, meshCopy))
+					for (const auto h : CGAL::halfedges_around_target(currentHalfedge, meshCopy))
 					{
 						halfedge_descriptor oh = meshCopy.opposite(h);
 						if (meshCopy.is_border(oh))
