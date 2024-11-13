@@ -1,5 +1,6 @@
 #include <string>
 #include <omp.h>
+#include <vector>
 
 #include "CGALTypes.h"
 
@@ -21,7 +22,7 @@ void writeWireframeOBJ(std::string outputFileName, const Mesh& mesh)
 	os << std::endl;
 	for (vertex_descriptor vertex : mesh.vertices())
 	{
-		Point3 point = mesh.point(vertex);
+		Point_3 point = mesh.point(vertex);
 		os << "v " << point.x() << " " << point.y() << " " << point.z() << std::endl;
 	}
 	os << std::endl;
@@ -35,6 +36,16 @@ void writeWireframeOBJ(std::string outputFileName, const Mesh& mesh)
 	}
 	os << std::endl;
 	os << "# End of Wavefront obj format #" << std::endl;
+}
+
+std::vector<Point_2> polygonToVector(Polygon_2 polygon)
+{
+	std::vector<Point_2> pointsVector;
+	for (const auto& point : polygon)
+	{
+		pointsVector.push_back(point);
+	}
+	return pointsVector;
 }
 
 int main(int argc, char* argv[])
@@ -75,7 +86,8 @@ int main(int argc, char* argv[])
 #pragma endregion
 
 	std::vector<Mesh> sliceMeshes(slicesNum);
-	std::vector<std::vector<Polygon2>> polygons(slicesNum);
+	std::vector<std::vector<Polygon_2>> polygons(slicesNum);
+	std::vector<double> sliceHeight(slicesNum);
 	double sliceSpace = (maxZ - minZ) / (slicesNum + 1);
 
 #pragma omp parallel for
@@ -90,7 +102,8 @@ int main(int argc, char* argv[])
 			try 
 			{
 				// 尝试进行切割操作
-				CGAL::Polygon_mesh_processing::clip(meshCopy, Plane3(Point3(0, 0, planeHeight), Vector3(0, 0, -1)));
+				CGAL::Polygon_mesh_processing::clip(meshCopy, Plane_3(Point_3(0, 0, planeHeight), Vector_3(0, 0, -1)));
+				sliceHeight[i] = planeHeight;
 				success = true; // 如果没有异常，切割成功
 			}
 			catch (const std::exception& e) 
@@ -111,14 +124,14 @@ int main(int argc, char* argv[])
 
 			if (meshCopy.is_border(halfedge) && visitedEdges.find(halfedge) == visitedEdges.end())	// 当前半边未访问过，且是边界半边
 			{
-				Polygon2 polygon;
+				Polygon_2 polygon;
 				halfedge_descriptor start = halfedge;
 				halfedge_descriptor currentHalfedge = halfedge;
 				do
 				{
 					vertex_descriptor vertex = meshCopy.target(currentHalfedge);
-					Point3 point3 = meshCopy.point(vertex);
-					polygon.push_back(Point2(point3.x(), point3.y()));
+					Point_3 point3 = meshCopy.point(vertex);
+					polygon.push_back(Point_2(point3.x(), point3.y()));
 					visitedEdges.insert(currentHalfedge);
 
 					vertex_descriptor source = meshCopy.source(currentHalfedge);
@@ -171,8 +184,60 @@ int main(int argc, char* argv[])
 			sliceMesh.add_edge(v2v[source], v2v[target]);
 		}
 	}
-
 	writeWireframeOBJ(outputPath + fileName + "_Slice.obj", sliceMesh);
+
+
+#pragma region Simplify Polygons
+	Mesh simpSliceMesh;
+	std::vector<std::vector<Polygon_2>> simpPolygons(slicesNum);
+	CGAL::Polyline_simplification_2::Stop_above_cost_threshold Stop(0.5);
+	CGAL::Polyline_simplification_2::Squared_distance_cost Cost;
+	for (int i = 0; i < slicesNum; i++)
+	{
+		for (int j = 0; j < polygons[i].size(); j++)
+		{
+			simpPolygons[i].push_back(CGAL::Polyline_simplification_2::simplify(polygons[i][j], Cost, Stop));
+			std::vector<vertex_descriptor> vertices;
+			for (const auto& point2 : simpPolygons[i][j])
+			{
+				vertices.push_back(simpSliceMesh.add_vertex(Point_3(point2.x(), point2.y(), sliceHeight[i])));
+			}
+			for (int k = 0; k < vertices.size(); k++)
+			{
+				simpSliceMesh.add_edge(vertices[k], vertices[(k + 1) % vertices.size()]);
+			}
+		}
+	}
+	writeWireframeOBJ(outputPath + fileName + "_SimpSlice.obj", simpSliceMesh);
+#pragma endregion
+
+	
+#pragma region Regularize Polygons
+	Mesh regSimpSliceMesh;
+	std::vector<std::vector<Polygon_2>> regSimpPolygons(slicesNum);
+	for (int i = 0; i < slicesNum; i++)
+	{
+		regSimpPolygons[i].resize(simpPolygons[i].size());
+		for (int j = 0; j < polygons[i].size(); j++)
+		{
+			std::vector<Point_2> pVector = polygonToVector(simpPolygons[i][j]);
+			std::vector<Point_2> outVector;
+			CGAL::Shape_regularization::Contours::regularize_closed_contour(pVector, std::back_inserter(outVector));
+			std::vector<vertex_descriptor> vertices;
+			for (const auto& point2 : outVector)
+			{
+				regSimpPolygons[i][j].push_back(point2);
+				vertices.push_back(regSimpSliceMesh.add_vertex(Point_3(point2.x(), point2.y(), sliceHeight[i])));
+			}
+			for (int k = 0; k < vertices.size(); k++)
+			{
+				regSimpSliceMesh.add_edge(vertices[k], vertices[(k + 1) % vertices.size()]);
+			}
+		}
+	}
+	writeWireframeOBJ(outputPath + fileName + "_RegSimpSlice.obj", regSimpSliceMesh);
+#pragma endregion
+
 
 	printf("done");
 }
