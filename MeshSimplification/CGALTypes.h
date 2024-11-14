@@ -12,7 +12,6 @@
 #include <CGAL/boost/graph/Face_filtered_graph.h>
 
 #include <CGAL/Shape_regularization/regularize_contours.h>
-#include <CGAL/Shape_regularization/regularize_segments.h>
 #include <CGAL/Polyline_simplification_2/simplify.h>
 #include <CGAL/linear_least_squares_fitting_3.h>
 
