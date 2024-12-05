@@ -1,6 +1,6 @@
 #include "UtilLib.h"
 
-void UtilLib::meshFiltering(Mesh& mesh, int iterCount)
+void UtilLib::MeshFiltering(Mesh& mesh, int iterCount)
 {
 	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
 	// 设置距离权重公式的σ,角度权重公式的θ
@@ -28,9 +28,9 @@ void UtilLib::meshFiltering(Mesh& mesh, int iterCount)
 		{
 			idx++;
 			filteredNormalMap[face] = Vector_3(0, 0, 0);
-			Point_3 centerPi = getFaceCenter(face, mesh);
+			Point_3 centerPi = GetFaceCenter(face, mesh);
 			Vector_3 normalFi = fNormalMap[face];
-			auto oneRingFaces = getTriFacesKRing(face, 1, mesh);
+			auto oneRingFaces = GetTriFacesKRing(face, 1, mesh);
 			for (auto neighborFace : oneRingFaces)
 			{
 				double alpha = 0, beta = 0;		// 权重
@@ -40,12 +40,12 @@ void UtilLib::meshFiltering(Mesh& mesh, int iterCount)
 				{
 					continue;
 				}
-				Point_3 centerPj = getFaceCenter(neighborFace, mesh);
+				Point_3 centerPj = GetFaceCenter(neighborFace, mesh);
 				alpha = std::exp(-(CGAL::squared_distance(centerPi, centerPj) / (2 * sigma * sigma)));
 				double tmp1 = std::pow(1 - std::fabs(dot), 2);
 				double tmp2 = std::pow(1 - std::cos(sita), 2);
 				beta = std::exp(-(tmp1 / tmp2));
-				double faceArea = getTriFaceArea(neighborFace, mesh);
+				double faceArea = CGAL::Polygon_mesh_processing::face_area(neighborFace, mesh);
 				Vector_3 filteredNormal = faceArea * alpha * beta * normalFj;
 				filteredNormalMap[face] += filteredNormal;
 			}
@@ -66,7 +66,7 @@ void UtilLib::meshFiltering(Mesh& mesh, int iterCount)
 					continue;
 				}
 				facesCount++;
-				Point_3 centerPointFk = getFaceCenter(face, mesh);
+				Point_3 centerPointFk = GetFaceCenter(face, mesh);
 				Vector_3 vectorVC = centerPointFk - point;
 				deltaVector += CGAL::scalar_product(vectorVC, filteredNormalMap[face]) * fNormalMap[face];
 				deltaVector;
@@ -81,7 +81,7 @@ void UtilLib::meshFiltering(Mesh& mesh, int iterCount)
 	}
 }
 
-Point_3 UtilLib::getFaceCenter(const face_descriptor& face, const Mesh& mesh)
+Point_3 UtilLib::GetFaceCenter(const face_descriptor& face, const Mesh& mesh)
 {
 	int size = 0;
 	Vector_3 sum(0, 0, 0);
@@ -96,7 +96,7 @@ Point_3 UtilLib::getFaceCenter(const face_descriptor& face, const Mesh& mesh)
 	return centerPoint;
 }
 
-std::set<face_descriptor> UtilLib::getTriFacesKRing(const face_descriptor& face, int kRing, const Mesh& mesh)
+std::set<face_descriptor> UtilLib::GetTriFacesKRing(const face_descriptor& face, int kRing, const Mesh& mesh)
 {
 	std::set<face_descriptor> faces;
 	faces.insert(face);
@@ -135,34 +135,10 @@ std::set<face_descriptor> UtilLib::getTriFacesKRing(const face_descriptor& face,
 	return faces;
 }
 
-double UtilLib::getTriFaceArea(const face_descriptor& face, const Mesh& mesh)
-{
-	int size = 0;
-	double faceArea = 0;
-	for (auto vertex : CGAL::vertices_around_face(mesh.halfedge(face), mesh))
-	{
-		size++;
-	}
-	if (size == 3)
-	{
-		Point_3 points[3];
-		int i = 0;
-		for (auto vertex : CGAL::vertices_around_face(mesh.halfedge(face), mesh))
-		{
-			points[i] = mesh.point(vertex);
-			i++;
-		}
-		Vector_3 vectorA = points[1] - points[0];
-		Vector_3 vectorB = points[2] - points[0];
-		faceArea = 0.5 * std::sqrt(CGAL::cross_product(vectorA, vectorB).squared_length());
-	}
-	return faceArea;
-}
 
-
-double UtilLib::computeVPlanarityOfKRing(const vertex_descriptor& vertex, int kRing, const Mesh& mesh)
+double UtilLib::ComputeVPlanarityOfKRing(const vertex_descriptor& vertex, int kRing, const Mesh& mesh)
 {
-	std::set<vertex_descriptor> neighbors = getVerticesKRing(vertex, kRing, mesh);
+	std::set<vertex_descriptor> neighbors = GetVerticesKRing(vertex, kRing, mesh);
 	std::vector<Point_3> points;
 	for (auto vertex : neighbors)
 	{
@@ -173,7 +149,7 @@ double UtilLib::computeVPlanarityOfKRing(const vertex_descriptor& vertex, int kR
 	return planarity;
 }
 
-std::set<vertex_descriptor> UtilLib::getVerticesKRing(const vertex_descriptor& vertex, int kRing, const Mesh& mesh)
+std::set<vertex_descriptor> UtilLib::GetVerticesKRing(const vertex_descriptor& vertex, int kRing, const Mesh& mesh)
 {
 	std::set<vertex_descriptor> vertices;
 	vertices.insert(vertex);
@@ -200,7 +176,7 @@ std::set<vertex_descriptor> UtilLib::getVerticesKRing(const vertex_descriptor& v
 	return vertices;
 }
 
-std::vector<vertex_descriptor> UtilLib::getVerticesAroundFace(const CGAL::SM_Face_index& face, const Mesh& mesh)
+std::vector<vertex_descriptor> UtilLib::GetVerticesAroundFace(const CGAL::SM_Face_index& face, const Mesh& mesh)
 {
 	std::vector<vertex_descriptor> vertices;
 	for (halfedge_descriptor halfedge : CGAL::halfedges_around_face(mesh.halfedge(face), mesh))
@@ -210,7 +186,7 @@ std::vector<vertex_descriptor> UtilLib::getVerticesAroundFace(const CGAL::SM_Fac
 	return vertices;
 }
 
-CGAL::Color UtilLib::getRandomColor()
+CGAL::Color UtilLib::GetRandomColor()
 {
 	int R = -1; int G = -1; int B = -1;
 	while (R < 150) { R = rand() % 256; }
@@ -219,7 +195,7 @@ CGAL::Color UtilLib::getRandomColor()
 	return CGAL::Color(R, G, B);
 }
 
-std::set<int> UtilLib::getPartitionNeighbors(int id, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
+std::set<int> UtilLib::GetPartitionNeighbors(int id, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
 {
 	auto fChartMap = mesh.property_map<face_descriptor, int>("f:chart").first;
 	std::set<int> neighbors;
@@ -239,7 +215,7 @@ std::set<int> UtilLib::getPartitionNeighbors(int id, const std::map<int, std::se
 	return neighbors;
 }
 
-Vector_3 UtilLib::getPartitionAverageNormal(int id, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
+Vector_3 UtilLib::GetPartitionAverageNormal(int id, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
 {
 	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
 	Vector_3 normal(0.0, 0.0, 0.0);
@@ -251,7 +227,7 @@ Vector_3 UtilLib::getPartitionAverageNormal(int id, const std::map<int, std::set
 	return normal;
 }
 
-Mesh UtilLib::makeCube(const Point_3& minPoint, const Point_3& maxPoint)
+Mesh UtilLib::MakeCube(const Point_3& minPoint, const Point_3& maxPoint)
 {
 	Mesh cubeMesh;
 	vertex_descriptor v0 = cubeMesh.add_vertex(minPoint);
@@ -279,7 +255,7 @@ Mesh UtilLib::makeCube(const Point_3& minPoint, const Point_3& maxPoint)
 	return cubeMesh;
 }
 
-bool UtilLib::intersection(const Plane_3& plane, const Mesh& mesh)
+bool UtilLib::Intersection(const Plane_3& plane, const Mesh& mesh)
 {
 	const double epsilon = 1e-2; // 容差值，可根据精度需求调整
 
@@ -312,7 +288,7 @@ bool UtilLib::intersection(const Plane_3& plane, const Mesh& mesh)
 	return false;
 }
 
-bool UtilLib::intersection(const Line_3& line, const face_descriptor& triangleFace, const Mesh& mesh)
+bool UtilLib::Intersection(const Line_3& line, const face_descriptor& triangleFace, const Mesh& mesh)
 {
 	const double EPSILON = 1e-8;
 
@@ -356,7 +332,7 @@ bool UtilLib::intersection(const Line_3& line, const face_descriptor& triangleFa
 }
 
 
-bool UtilLib::isPolyhedronValid(const Mesh& mesh)
+bool UtilLib::IsPolyhedronValid(const Mesh& mesh)
 {
 	bool bIsValid = false;
 	// Mesh has vertex that actually exists
@@ -388,7 +364,7 @@ Vector_3 compute_orthogonal_vector(const Vector_3& normal)
 	}
 }
 
-void UtilLib::createPlaneMesh(const Plane_3& plane, const Point_3& centerPoint, Mesh& mesh, double size)
+void UtilLib::CreatePlaneMesh(const Plane_3& plane, const Point_3& centerPoint, Mesh& mesh, double size)
 {
 	// 法向量
 	Kernel::Vector_3 normal(plane.a(), plane.b(), plane.c());
@@ -421,7 +397,7 @@ void UtilLib::createPlaneMesh(const Plane_3& plane, const Point_3& centerPoint, 
 	mesh.add_face(v1, v3, v4);
 }
 
-Point_3 UtilLib::getMeshCenterPoint(const Mesh& mesh)
+Point_3 UtilLib::GetMeshCenterPoint(const Mesh& mesh)
 {
 	double x = 0.0, y = 0.0, z = 0.0;
 	int num = 0;
@@ -438,17 +414,32 @@ Point_3 UtilLib::getMeshCenterPoint(const Mesh& mesh)
 	return Point_3(x, y, z);
 }
 
-//Point_3 UtilLib::getPolyhedronCentroid(const Mesh& polyhedron)
-//{
-//	std::vector<Point_3> centroidPoints;
-//	std::vector<double> facesArea;
-//	for (const auto& face : polyhedron.faces())
-//	{
-//		facesArea.push_back(CGAL::Polygon_mesh_processing::face_area(face, polyhedron));
-//
-//		for (const auto& vertex : polyhedron.vertices_around_face(polyhedron.halfedge(face)))
-//		{
-//
-//		}
-//	}
-//}
+void UtilLib::CentralizeMesh(Mesh& mesh)
+{
+	// 1. 初始化边界
+	Point_3 boxMin(DBL_MAX, DBL_MAX, DBL_MAX);
+	Point_3 boxMax(-DBL_MAX, -DBL_MAX, -DBL_MAX);
+
+	// 2. 遍历所有顶点，计算包围盒
+	for (const auto& p : mesh.points()) 
+	{
+		boxMin = Point_3(std::min(boxMin.x(), p.x()),
+			std::min(boxMin.y(), p.y()),
+			std::min(boxMin.z(), p.z()));
+		boxMax = Point_3(std::max(boxMax.x(), p.x()),
+			std::max(boxMax.y(), p.y()),
+			std::max(boxMax.z(), p.z()));
+	}
+
+	// 3. 计算中心点
+	Point_3 center((boxMin.x() + boxMax.x()) / 2.0,
+		(boxMin.y() + boxMax.y()) / 2.0,
+		(boxMin.z() + boxMax.z()) / 2.0);
+
+	// 4. 平移所有顶点
+	for (const auto& v : mesh.vertices()) 
+	{
+		Point_3 p = mesh.point(v);
+		mesh.point(v) = Point_3(p.x() - center.x(), p.y() - center.y(), p.z() - center.z());
+	}
+}

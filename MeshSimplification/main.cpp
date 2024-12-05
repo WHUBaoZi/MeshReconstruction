@@ -3,13 +3,18 @@
 #include "UtilLib.h"
 #include "CGALTypes.h"
 #include "PolyhedronSegmentation.h"
+#include "Partition.h"
 
-std::map<int, std::set<face_descriptor>> partitionByNormal(double divideAngle, Mesh& mesh);
-void removeNoise(double ignoreSize, std::map<int, std::set<face_descriptor>>& partitionFacesMap, Mesh& mesh);
-std::map<int, std::set<face_descriptor>> meshPartition(Mesh& mesh);
+std::map<int, std::set<face_descriptor>> PartitionByNormal(double divideAngle, Mesh& mesh);
+void RemoveNoise(double ignoreSize, std::map<int, std::set<face_descriptor>>& partitionFacesMap, Mesh& mesh);
+std::map<int, std::set<face_descriptor>> MeshPartition(Mesh& mesh);
 
 int main(int argc, char* argv[])
 {
+	std::chrono::steady_clock::time_point start;
+	std::chrono::steady_clock::time_point end;
+	std::vector<std::pair<std::string, long long>> timings;
+
 #pragma region Input mesh file
 	std::string inputFile = "../Data/chosenTestData/test6.obj";
 	std::string outputPath = "../Data/Output/";
@@ -26,87 +31,87 @@ int main(int argc, char* argv[])
 	}
 	Mesh mesh;
 	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(inputFile, mesh);
+	UtilLib::CentralizeMesh(mesh);
 #pragma endregion
 
 
 #pragma region Mesh Partition
-	auto partitionFacesMap = meshPartition(mesh);
+	std::cout << "Start Mesh Partition..." << std::endl;
+	start = std::chrono::high_resolution_clock::now();
+	auto partitionFacesMap = MeshPartition(mesh);
 	auto fColorMap = mesh.property_map<face_descriptor, CGAL::Color>("f:color").first;
-	CGAL::IO::write_OFF(outputPath + fileName + "_PartitionMesh.off", mesh, CGAL::parameters::face_color_map(fColorMap));
+	CGAL::IO::write_OFF(outputPath + fileName + "/" + fileName + "_PartitionMesh.off", mesh, CGAL::parameters::face_color_map(fColorMap));
+	end = std::chrono::high_resolution_clock::now();
+	timings.emplace_back(std::make_pair("Mesh Partition", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+	std::cout << "Mesh Partition finished. Time taken: " << timings[0].second << " seconds" << std::endl;
 #pragma endregion
-
-
-
 
 
 #pragma region Get Partition Planes
-///////////////////////////////////////////
-// for test
-	std::set<int> keysToRemove;
+	std::map<int, Partition> partitionMap;
+	double thresholdCosine = std::cos(10.0 * UtilLib::DEG_TO_RAD);
 	for (const auto& pair : partitionFacesMap)
 	{
-		bool bLoopControl = false;
-		for (const auto& face : pair.second)
-		{
-			for (const auto& vertex : CGAL::vertices_around_face(mesh.halfedge(face), mesh))
-			{
-				if (mesh.point(vertex).z() < 14.15)
-				{
-					bLoopControl = true;
-					keysToRemove.insert(pair.first);
-					break;
-				}
-			}
-			if (bLoopControl)
-			{
-				break;
-			}
-		}
-		if (bLoopControl)
+		Partition partition(pair.second, &mesh);
+		partition.index = pair.first;
+		partitionMap.insert(std::make_pair(pair.first, partition));
+	}
+
+	// Partition Filter
+	std::set<int> uselessPartitionIndices;
+
+#pragma region Remove partitions that has proximal fit plane
+	std::vector<int> partitionIndices;
+	for (const auto& pair : partitionMap)
+	{
+		partitionIndices.emplace_back(pair.first);
+	}
+	for (size_t i = 0; i < partitionIndices.size() - 1; i++)
+	{
+		int indexI = partitionIndices[i];
+		if (uselessPartitionIndices.find(indexI) != uselessPartitionIndices.end())
 		{
 			continue;
 		}
-	}
-	for (int key : keysToRemove)
-	{
-		partitionFacesMap.erase(key);
-	}
-///////////////////////////////////////////
-
-	std::map<int, Plane_3> partitionPlaneMap;
-	std::map<int, Vector_3> partitionNormalMap;
-	for (const auto& pair : partitionFacesMap)
-	{
-		for (const auto& face : pair.second)
+		for (size_t j = i + 1; j < partitionIndices.size(); j++)
 		{
-			std::set<Point_3> pointsSet;
-			for (const auto& vertex : CGAL::vertices_around_face(mesh.halfedge(face), mesh))
+			int indexJ = partitionIndices[j];
+			if (uselessPartitionIndices.find(indexJ) != uselessPartitionIndices.end())
 			{
-				pointsSet.insert(mesh.point(vertex));
+				continue;
 			}
-			Plane_3 plane;
-			CGAL::linear_least_squares_fitting_3(pointsSet.begin(), pointsSet.end(), plane, CGAL::Dimension_tag<0>());
-			partitionNormalMap.insert(std::make_pair(pair.first, UtilLib::getPartitionAverageNormal(pair.first, partitionFacesMap, mesh)));
-			if (plane.orthogonal_vector() * partitionNormalMap[pair.first] < 0)
+
+			if (Partition::CheckPartitionProximity(partitionMap[indexI], partitionMap[indexJ]))
 			{
-				partitionPlaneMap.insert(std::make_pair(pair.first, UtilLib::reversePlane(plane)));
-			}
-			else
-			{
-				partitionPlaneMap.insert(std::make_pair(pair.first, plane));
+				if (partitionMap[indexI].area > partitionMap[indexJ].area)
+				{
+					uselessPartitionIndices.insert(indexJ);
+					continue;
+				}
+				else
+				{
+					uselessPartitionIndices.insert(indexI);
+					break;
+				}
 			}
 		}
 	}
 #pragma endregion
+
+#pragma endregion
 	
-	PolyhedronSegmentation polyhedronSegmentation(mesh, partitionPlaneMap);
-	polyhedronSegmentation.run();
+	PolyhedronSegmentation polyhedronSegmentation(&partitionMap, &uselessPartitionIndices, &mesh);
+	polyhedronSegmentation.Run(outputPath + fileName + "/PolyhedronSegmentation/");
 
 	printf("done");
 }
 
 
-std::map<int, std::set<face_descriptor>> meshPartition(Mesh& mesh)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// functions
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+std::map<int, std::set<face_descriptor>> MeshPartition(Mesh& mesh)
 {
 	int kRing = 3;
 	auto fChartMap = mesh.add_property_map<face_descriptor, int>("f:chart", -1).first;
@@ -117,18 +122,18 @@ std::map<int, std::set<face_descriptor>> meshPartition(Mesh& mesh)
 	CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
 
 	// Mesh filter
-	UtilLib::meshFiltering(mesh, 20);
+	UtilLib::MeshFiltering(mesh, 10);
 
 	// Planarity compute
 	for (auto vertex : mesh.vertices())
 	{
-		vPlanarityMap[vertex] = UtilLib::computeVPlanarityOfKRing(vertex, kRing, mesh);
+		vPlanarityMap[vertex] = UtilLib::ComputeVPlanarityOfKRing(vertex, kRing, mesh);
 	}
 
 	for (auto face : mesh.faces())
 	{
 		double sum = 0.0;
-		std::vector<vertex_descriptor> vertices = UtilLib::getVerticesAroundFace(face, mesh);
+		std::vector<vertex_descriptor> vertices = UtilLib::GetVerticesAroundFace(face, mesh);
 		for (const auto& vertex : vertices)
 		{
 			sum += vPlanarityMap[vertex];
@@ -137,12 +142,12 @@ std::map<int, std::set<face_descriptor>> meshPartition(Mesh& mesh)
 	}
 
 	// Classify
-	auto partitionFacesMap = partitionByNormal(10.0, mesh);
-	removeNoise(40, partitionFacesMap, mesh);
+	auto partitionFacesMap = PartitionByNormal(10.0, mesh);
+	RemoveNoise(20, partitionFacesMap, mesh);
 	return partitionFacesMap;
 }
 
-std::map<int, std::set<face_descriptor>> partitionByNormal(double divideAngle, Mesh& mesh)
+std::map<int, std::set<face_descriptor>> PartitionByNormal(double divideAngle, Mesh& mesh)
 {
 	auto fChartMap = mesh.property_map<face_descriptor, int>("f:chart").first;
 	auto fColorMap = mesh.property_map<face_descriptor, CGAL::Color>("f:color").first;
@@ -150,26 +155,35 @@ std::map<int, std::set<face_descriptor>> partitionByNormal(double divideAngle, M
 	auto fPlanarityMap = mesh.property_map<face_descriptor, double>("f:planarity").first;
 	std::map<int, std::set<face_descriptor>> partitionFacesMap;
 
+	std::vector<face_descriptor> faces;
+	for (const auto& face : mesh.faces())
+	{
+		faces.push_back(face);
+	}
+	// Æ½Ãæ¶È½µÐò
+	std::sort(faces.begin(), faces.end(), [&](const face_descriptor& a, const face_descriptor& b) {return fPlanarityMap[a] > fPlanarityMap[b];});
+	std::queue<face_descriptor> facesQueue;
+	for (const auto& face: faces)
+	{
+		facesQueue.push(face);
+	}
+
 	double biggerDivideAngle = 3.0 * divideAngle;
 	const double verticalDot = std::cos(70.0 * M_PI / 180.0), horizontalDot = std::cos(15.0 * M_PI / 180.0);
 	int currentType = 0;
-	CGAL::Color currentColor = UtilLib::getRandomColor();
-	std::set<face_descriptor> seeds;
-
-	auto compare = [&](face_descriptor a, face_descriptor b) { return fPlanarityMap[a] > fPlanarityMap[b]; };
-	std::set<face_descriptor, decltype(compare) > faces(compare);
-	for (auto face : mesh.faces())
+	CGAL::Color currentColor = UtilLib::GetRandomColor();
+	while (!facesQueue.empty())
 	{
-		faces.insert(face);
-	}
-	while (faces.size() != 0)
-	{
-		auto maxPlanarityFace = *faces.begin();
-		seeds.insert(maxPlanarityFace);
-		fChartMap[*seeds.begin()] = currentType;
-		fColorMap[*seeds.begin()] = currentColor;
-		partitionFacesMap[currentType].insert(*seeds.begin());
-		Vector_3 sumNormal = fNormalMap[maxPlanarityFace];
+		face_descriptor seed = facesQueue.front();
+		facesQueue.pop();
+		if (fChartMap[seed] != -1)
+		{
+			continue;
+		}
+		fChartMap[seed] = currentType;
+		fColorMap[seed] = currentColor;
+		partitionFacesMap[currentType].insert(seed);
+		Vector_3 sumNormal = fNormalMap[seed];
 		bool bIsVertical = false, bIsHorizontal = false;
 		double dot = sumNormal * UtilLib::unitZ;
 		if (dot < verticalDot)
@@ -181,14 +195,15 @@ std::map<int, std::set<face_descriptor>> partitionByNormal(double divideAngle, M
 			bIsHorizontal = true;
 		}
 		int facesCount = 1;
-		while (seeds.size() != 0)
+		std::set<face_descriptor> clusterFaces;
+		clusterFaces.insert(seed);
+		while (!clusterFaces.empty())
 		{
-			std::set<face_descriptor> neighbors;
-			std::set<face_descriptor> seedDomain;
-			std::set<face_descriptor> newSeeds;
-			for (auto seed : seeds)
+			std::set<face_descriptor> newClusterFaces;
+			for (face_descriptor face : clusterFaces)
 			{
-				for (const auto& neighbor : CGAL::faces_around_face(mesh.halfedge(seed), mesh))
+				std::set<face_descriptor> neighbors;
+				for (const auto& neighbor : CGAL::faces_around_face(mesh.halfedge(face), mesh))
 				{
 					if (neighbor != Mesh::null_face())
 					{
@@ -218,30 +233,23 @@ std::map<int, std::set<face_descriptor>> partitionByNormal(double divideAngle, M
 						fChartMap[neighbor] = currentType;
 						fColorMap[neighbor] = currentColor;
 						partitionFacesMap[currentType].insert(neighbor);
-						newSeeds.insert(neighbor);
+						newClusterFaces.insert(neighbor);
 						sumNormal += neighborUnitNormal;
 						facesCount++;
 					}
 				}
 			}
-			for (const auto& face : seeds)
-			{
-				faces.erase(face);
-			}
-			for (const auto& face : newSeeds)
-			{
-				faces.erase(face);
-			}
-			seeds.clear();
-			seeds.insert(newSeeds.begin(), newSeeds.end());
+			clusterFaces.clear();
+			clusterFaces.insert(newClusterFaces.begin(), newClusterFaces.end());
 		}
 		currentType++;
-		currentColor = UtilLib::getRandomColor();
+		currentColor = UtilLib::GetRandomColor();
 	}
+
 	return partitionFacesMap;
 }
 
-void removeNoise(double ignoreSize, std::map<int, std::set<face_descriptor>>& partitionFacesMap, Mesh& mesh)
+void RemoveNoise(double ignoreSize, std::map<int, std::set<face_descriptor>>& partitionFacesMap, Mesh& mesh)
 {
 	auto fColorMap = mesh.property_map<face_descriptor, CGAL::Color>("f:color").first;
 	auto fChartMap = mesh.property_map<face_descriptor, int>("f:chart").first;
@@ -267,13 +275,13 @@ void removeNoise(double ignoreSize, std::map<int, std::set<face_descriptor>>& pa
 			double maxDot = -99999.0;
 			if (currFaceCount < ignoreSize)
 			{
-				auto neighborIds = UtilLib::getPartitionNeighbors(id, partitionFacesMap, mesh);
-				Vector_3 normal = UtilLib::getPartitionAverageNormal(id, partitionFacesMap, mesh);
+				auto neighborIds = UtilLib::GetPartitionNeighbors(id, partitionFacesMap, mesh);
+				Vector_3 normal = UtilLib::GetPartitionAverageNormal(id, partitionFacesMap, mesh);
 				for (int neighborId : neighborIds)
 				{
 					size_t neiFaceCount = partitionFacesMap[neighborId].size();
-					Vector_3 neiborNormal = UtilLib::getPartitionAverageNormal(neighborId, partitionFacesMap, mesh);
-					double currDot = normal * neiborNormal;
+					Vector_3 neighborNormal = UtilLib::GetPartitionAverageNormal(neighborId, partitionFacesMap, mesh);
+					double currDot = normal * neighborNormal;
 					if (currDot > maxDot)
 					{
 						maxDot = currDot;

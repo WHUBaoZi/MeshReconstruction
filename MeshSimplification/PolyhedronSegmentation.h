@@ -2,19 +2,19 @@
 
 #include "CGALTypes.h"
 #include "UtilLib.h"
-
+#include "Partition.h"
 
 class Polyhedron
 {
 public:
 	Mesh polyhedronMesh;
-	std::vector<Plane_3> planes;
+	std::vector<Partition> partitions;
 	std::vector<int> planeIntersectionNums;
 
 public:
-	Polyhedron(Mesh polyhedronMesh, std::vector<Plane_3> parentPlanes);
+	Polyhedron(Mesh polyhedronMesh, std::vector<Partition> parentPartitions);
 
-	Mesh drawPlanesMesh(const Point_3& centerPoint);
+	Mesh DrawPlanesMesh();
 
 	inline int GetMinIntersectionIndex(){ return std::distance(planeIntersectionNums.begin(), std::min_element(planeIntersectionNums.begin(), planeIntersectionNums.end())); }
 };
@@ -22,18 +22,20 @@ public:
 class PolyhedronSegmentation
 {
 public:
-	Mesh mesh;
+	const Mesh* mesh = nullptr;
 	
 	Mesh cubeMesh;
 	
-	std::map<int, Plane_3> partitionPlaneMap;
+	const std::map<int, Partition>* partitionMap = nullptr;
+
+	std::set<int>* uselessPartitionIndices = nullptr;
 
 	std::queue<Polyhedron> polyhedrons;
 
 	std::vector<Polyhedron> indivisiblePolyhedrons;
 
 public:
-	PolyhedronSegmentation(Mesh mesh, std::map<int, Plane_3> partitionPlaneMap);
+	PolyhedronSegmentation(const std::map<int, Partition>* partitionMap, std::set<int>* uselessPartitionIndices, const Mesh* mesh);
 
-	Mesh run();
+	Mesh Run(std::string outputPath);
 };
