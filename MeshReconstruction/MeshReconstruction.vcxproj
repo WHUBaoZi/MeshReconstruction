@@ -24,7 +24,7 @@
     <ProjectGuid>{0e41a372-978f-4402-b085-2a8fb38258a5}</ProjectGuid>
     <RootNamespace>MesSimplification</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>MeshSimplification</ProjectName>
+    <ProjectName>MeshReconstruction</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -75,6 +75,10 @@
     <IncludePath>C:\dev\CGAL-5.6.2\include;C:\dev\CGAL-5.6.2\auxiliary\gmp\include;$(Eigen_DIR);$(BOOST_INCLUDEDIR);$(IncludePath)</IncludePath>
     <LibraryPath>D:\dev\boost_1_86_0\libs;D:\dev\boost_1_86_0\stage\lib;C:\dev\CGAL-5.6.2\auxiliary\gmp\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(CGAL_DIR)\include;$(BOOST_INCLUDEDIR);$(Eigen_DIR);$(CGAL_DIR)\auxiliary\gmp\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(BOOST_LIBRARYDIR);$(CGAL_DIR)\auxiliary\gmp\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -114,6 +118,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>libgmp-10.lib;libmpfr-4.lib;libboost_filesystem-vc143-mt-gd-x64-1_86.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

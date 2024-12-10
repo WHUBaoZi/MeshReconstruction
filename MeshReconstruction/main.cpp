@@ -59,6 +59,8 @@ int main(int argc, char* argv[])
 
 	// Partition Filter
 	std::set<int> uselessPartitionIndices;
+#pragma endregion
+
 
 #pragma region Remove partitions that has proximal fit plane
 	std::vector<int> partitionIndices;
@@ -98,8 +100,28 @@ int main(int argc, char* argv[])
 	}
 #pragma endregion
 
+
+#pragma region Remove partitions with small area
+	partitionIndices.clear();
+	for (const auto& pair : partitionMap)
+	{
+		if (uselessPartitionIndices.find(pair.first) == uselessPartitionIndices.end())
+		{
+			partitionIndices.push_back(pair.first);
+		}
+	}
+	std::sort(partitionIndices.begin(), partitionIndices.end(), [&](const int& indexA, const int& indexB) {return partitionMap[indexA].area > partitionMap[indexB].area; });
+
+	int maxPartitionsNum = 20;
+	for (size_t i = 0; i < partitionIndices.size(); i++)
+	{
+		if (i > maxPartitionsNum - 1)
+		{
+			uselessPartitionIndices.insert(partitionIndices[i]);
+		}
+	}
 #pragma endregion
-	
+
 	PolyhedronSegmentation polyhedronSegmentation(&partitionMap, &uselessPartitionIndices, &mesh);
 	polyhedronSegmentation.Run(outputPath + fileName + "/PolyhedronSegmentation/");
 
@@ -169,7 +191,7 @@ std::map<int, std::set<face_descriptor>> PartitionByNormal(double divideAngle, M
 	}
 
 	double biggerDivideAngle = 3.0 * divideAngle;
-	const double verticalDot = std::cos(70.0 * M_PI / 180.0), horizontalDot = std::cos(15.0 * M_PI / 180.0);
+	const double verticalDot = std::cos(70.0 * PI / 180.0), horizontalDot = std::cos(15.0 * PI / 180.0);
 	int currentType = 0;
 	CGAL::Color currentColor = UtilLib::GetRandomColor();
 	while (!facesQueue.empty())
@@ -228,7 +250,7 @@ std::map<int, std::set<face_descriptor>> PartitionByNormal(double divideAngle, M
 					{
 						currDivideAngle = biggerDivideAngle;
 					}
-					if (unitNormal * neighborUnitNormal > std::cos(currDivideAngle * M_PI / 180))
+					if (unitNormal * neighborUnitNormal > std::cos(currDivideAngle * PI / 180))
 					{
 						fChartMap[neighbor] = currentType;
 						fColorMap[neighbor] = currentColor;

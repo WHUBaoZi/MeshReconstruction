@@ -1,7 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <vector>
+#include <map>
+#include <set>
 #include <queue>
 #include <cmath>
 #include <chrono>
@@ -11,11 +13,13 @@
 
 #include "CGALTypes.h"
 
+#define PI std::acos(-1)
+
 namespace UtilLib
 {
 	const Vector_3 unitZ(0.0, 0.0, 1.0);
 
-	constexpr double DEG_TO_RAD = M_PI / 180.0;
+	const double DEG_TO_RAD = PI / 180.0;
 
 	constexpr double INF = std::numeric_limits<double>::infinity();
 

@@ -4,7 +4,7 @@ void UtilLib::MeshFiltering(Mesh& mesh, int iterCount)
 {
 	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
 	// 设置距离权重公式的σ,角度权重公式的θ
-	double sigma = 0, sita = 20 * M_PI / 180;	// θ初始化为20°
+	double sigma = 0, sita = 20 * PI / 180;	// θ初始化为20°
 	double standardDot = std::cos(sita);
 	{
 		double sum = 0;

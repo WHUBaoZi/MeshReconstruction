@@ -51,11 +51,11 @@ void Partition::CalculateAverageNormal()
 bool Partition::CheckPartitionProximity(const Partition& partitionA, const Partition& partitionB)
 {
 	double dot = partitionA.fitPlaneNormal * partitionB.fitPlaneNormal;
-	if (std::abs(dot) > std::cos(10 * UtilLib::DEG_TO_RAD))
+	if (std::abs(dot) > std::cos(5 * UtilLib::DEG_TO_RAD))
 	{
 		double distanceA = CGAL::squared_distance(partitionA.centerPoint, partitionB.fitPlane);
 		double distanceB = CGAL::squared_distance(partitionB.centerPoint, partitionA.fitPlane);
-		if (distanceA < 2 || distanceB < 2)
+		if (distanceA < 1 || distanceB < 1)
 		{
 			return true;
 		}

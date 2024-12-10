@@ -71,14 +71,17 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 	Point_3 centerPoint = UtilLib::GetMeshCenterPoint(cubeMesh);
 	{
 		std::vector<Partition> partitions;
+		std::vector<Partition> allPartitions;
 		for (const auto& pair : *partitionMap)
 		{
 			if (uselessPartitionIndices->find(pair.first) == uselessPartitionIndices->end())
 			{
 				partitions.push_back(pair.second);
 			}
+			allPartitions.push_back(pair.second);
 		}
 		polyhedrons.push(Polyhedron(cubeMesh, partitions));
+		CGAL::IO::write_OBJ(outputPath + "Original_PolyhedronPlanes.obj", Polyhedron(cubeMesh, allPartitions).DrawPlanesMesh());
 	}
 
 	int loopNum = 1;
@@ -137,7 +140,10 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 
 		std::vector<Partition> parentPartitions = polyhedron.partitions;
 		parentPartitions.erase(parentPartitions.begin() + clipPlaneIndex);
-		if (true)
+
+		std::map<Mesh::Face_index, std::size_t> face_component_map;
+		boost::associative_property_map<std::map<Mesh::Face_index, std::size_t>> fcm(face_component_map);
+		if (CGAL::Polygon_mesh_processing::connected_components(belowMesh, fcm) == 1)
 		{
 			CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Below.obj", belowMesh);
 			
@@ -151,7 +157,7 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 				indivisiblePolyhedrons.push_back(belowPolyhedron);
 			}
 		}
-		if (true)
+		if (CGAL::Polygon_mesh_processing::connected_components(aboveMesh, fcm) == 1)
 		{
 			CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Above.obj", aboveMesh);
 			Polyhedron abovePolyhedron(aboveMesh, parentPartitions);
@@ -169,6 +175,8 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 	}
 
 	Tree tree((*mesh).faces().begin(), (*mesh).faces().end(), *mesh);
+	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useless/");
+	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useful/");
 	for (int i = 0; i < indivisiblePolyhedrons.size(); i++)
 	{
 		Point_3 centroid = CGAL::Polygon_mesh_processing::centroid(indivisiblePolyhedrons[i].polyhedronMesh);
