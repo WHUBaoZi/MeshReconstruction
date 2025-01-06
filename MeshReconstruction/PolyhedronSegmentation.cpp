@@ -202,6 +202,5 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", indivisiblePolyhedrons[i]->polyhedronMesh);
 		}
 	}
-	printf("done");
     return Mesh();
 }

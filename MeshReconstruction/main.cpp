@@ -52,6 +52,8 @@ int main(int argc, char* argv[])
 
 
 #pragma region Get Partition Planes
+	std::cout << "Start Partition Optimization..." << std::endl;
+	start = std::chrono::high_resolution_clock::now();
 	std::map<int, Partition> partitionMap;
 	double thresholdCosine = std::cos(10.0 * UtilLib::DEG_TO_RAD);
 	for (const auto& pair : partitionFacesMap)
@@ -116,12 +118,20 @@ int main(int argc, char* argv[])
 			partitionManager.partitionSetMap[partitionSetIndices[i]].bIsValid = false;
 		}
 	}
-#pragma endregion
+	end = std::chrono::high_resolution_clock::now();
+	timings.emplace_back(std::make_pair("Partition Optimization", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+	std::cout << "Partition Optimization finished. Time taken: " << timings[0].second << " seconds" << std::endl;
 
+#pragma endregion
+	std::cout << "Start Polyhedron Segmentation..." << std::endl;
+	start = std::chrono::high_resolution_clock::now();
 	PolyhedronSegmentation polyhedronSegmentation(&partitionManager, &mesh);
 	polyhedronSegmentation.Run(outputPath + fileName + "/PolyhedronSegmentation/");
+	end = std::chrono::high_resolution_clock::now();
+	timings.emplace_back(std::make_pair("Polyhedron Segmentation", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+	std::cout << "Polyhedron Segmentation finished. Time taken: " << timings[0].second << " seconds" << std::endl;
 
-	printf("done");
+	std::cout << "All Done" << std::endl;
 }
 
 
