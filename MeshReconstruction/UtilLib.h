@@ -43,10 +43,6 @@ namespace UtilLib
 
 	Mesh MakeCube(const Point_3& minPoint, const Point_3& maxPoint);
 
-	bool Intersection(const Plane_3& plane, const Mesh& mesh);
-
-	bool Intersection(const Line_3& line, const face_descriptor& triangleFace, const Mesh& mesh);
-
 	bool IsPolyhedronValid(const Mesh& mesh);
 
 	void CreatePlaneMesh(const Plane_3& plane, const Point_3& centerPoint, Mesh& mesh, double size = 2.0);
@@ -56,4 +52,8 @@ namespace UtilLib
 	void CentralizeMesh(Mesh& mesh);
 
 	inline Plane_3 ReversePlane(const Plane_3& plane) { return Plane_3(-plane.a(), -plane.b(), -plane.c(), -plane.d()); }
+
+	inline Vector_3 PointToVector(const Point_3& point) { return Vector_3(point.x(), point.y(), point.z()); }
+
+	inline Point_3 VectorToPoint(const Vector_3& vector) { return Point_3(vector.x(), vector.y(), vector.z()); }
 }

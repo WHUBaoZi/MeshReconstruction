@@ -72,8 +72,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\dev\CGAL-5.6.2\include;C:\dev\CGAL-5.6.2\auxiliary\gmp\include;$(Eigen_DIR);$(BOOST_INCLUDEDIR);$(IncludePath)</IncludePath>
-    <LibraryPath>D:\dev\boost_1_86_0\libs;D:\dev\boost_1_86_0\stage\lib;C:\dev\CGAL-5.6.2\auxiliary\gmp\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;$(Eigen_DIR);$(BOOST_INCLUDEDIR);$(IncludePath)</IncludePath>
+    <LibraryPath>$(BOOST_LIBRARYDIR);$(CGAL_DIR)\auxiliary\gmp\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(CGAL_DIR)\include;$(BOOST_INCLUDEDIR);$(Eigen_DIR);$(CGAL_DIR)\auxiliary\gmp\include;$(IncludePath)</IncludePath>

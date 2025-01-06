@@ -15,12 +15,16 @@ int main(int argc, char* argv[])
 	std::chrono::steady_clock::time_point end;
 	std::vector<std::pair<std::string, long long>> timings;
 
+	double angleTolerance = 10.0;
+
 #pragma region Input mesh file
+	int maxPartitionsNum = 20;
 	std::string inputFile = "../Data/chosenTestData/test6.obj";
 	std::string outputPath = "../Data/Output/";
 	std::string fileName = "";
 	if (argc > 1)
 	{
+		maxPartitionsNum = std::stoi(argv[1]);
 		inputFile = argv[2];
 		outputPath = argv[3];
 	}
@@ -52,17 +56,15 @@ int main(int argc, char* argv[])
 	double thresholdCosine = std::cos(10.0 * UtilLib::DEG_TO_RAD);
 	for (const auto& pair : partitionFacesMap)
 	{
-		Partition partition(pair.second, &mesh);
-		partition.index = pair.first;
-		partitionMap.insert(std::make_pair(pair.first, partition));
+		Partition partition(pair, &partitionMap, &mesh);
+		partitionMap.emplace(std::make_pair(pair.first, partition));
 	}
-
-	// Partition Filter
-	std::set<int> uselessPartitionIndices;
 #pragma endregion
 
 
 #pragma region Remove partitions that has proximal fit plane
+	PartitionManager partitionManager(&partitionMap);
+
 	std::vector<int> partitionIndices;
 	for (const auto& pair : partitionMap)
 	{
@@ -71,58 +73,52 @@ int main(int argc, char* argv[])
 	for (size_t i = 0; i < partitionIndices.size() - 1; i++)
 	{
 		int indexI = partitionIndices[i];
-		if (uselessPartitionIndices.find(indexI) != uselessPartitionIndices.end())
+		if (partitionMap[indexI].partitionSet)
 		{
 			continue;
 		}
+		int partitionSetIndex = partitionManager.GetFreeIndex();
+		partitionManager.partitionSetMap.emplace(std::make_pair(partitionSetIndex, PartitionSet(partitionSetIndex)));
+		PartitionSet* partitionSet = &partitionManager.partitionSetMap[partitionSetIndex];
+		partitionSet->InsertPartition(&partitionMap[indexI]);
 		for (size_t j = i + 1; j < partitionIndices.size(); j++)
 		{
 			int indexJ = partitionIndices[j];
-			if (uselessPartitionIndices.find(indexJ) != uselessPartitionIndices.end())
+			if (partitionMap[indexJ].partitionSet)
 			{
 				continue;
 			}
-
-			if (Partition::CheckPartitionProximity(partitionMap[indexI], partitionMap[indexJ]))
+			if (Partition::CheckPartitionProximity(partitionMap[indexI], partitionMap[indexJ], angleTolerance))
 			{
-				if (partitionMap[indexI].area > partitionMap[indexJ].area)
-				{
-					uselessPartitionIndices.insert(indexJ);
-					continue;
-				}
-				else
-				{
-					uselessPartitionIndices.insert(indexI);
-					break;
-				}
+				partitionSet->InsertPartition(&partitionMap[indexJ]);
 			}
 		}
 	}
 #pragma endregion
 
+	for (auto& pair : partitionManager.partitionSetMap)
+	{
+		pair.second.Activate();
+	}
 
 #pragma region Remove partitions with small area
-	partitionIndices.clear();
-	for (const auto& pair : partitionMap)
+	std::vector<int> partitionSetIndices;
+	for (const auto& pair : partitionManager.partitionSetMap)
 	{
-		if (uselessPartitionIndices.find(pair.first) == uselessPartitionIndices.end())
-		{
-			partitionIndices.push_back(pair.first);
-		}
+		partitionSetIndices.push_back(pair.first);
 	}
-	std::sort(partitionIndices.begin(), partitionIndices.end(), [&](const int& indexA, const int& indexB) {return partitionMap[indexA].area > partitionMap[indexB].area; });
+	std::sort(partitionSetIndices.begin(), partitionSetIndices.end(), [&](const int& indexA, const int& indexB) {return partitionManager.partitionSetMap[indexA].totalArea > partitionManager.partitionSetMap[indexB].totalArea; });
 
-	int maxPartitionsNum = 20;
-	for (size_t i = 0; i < partitionIndices.size(); i++)
+	for (size_t i = 0; i < partitionSetIndices.size(); i++)
 	{
 		if (i > maxPartitionsNum - 1)
 		{
-			uselessPartitionIndices.insert(partitionIndices[i]);
+			partitionManager.partitionSetMap[partitionSetIndices[i]].bIsValid = false;
 		}
 	}
 #pragma endregion
 
-	PolyhedronSegmentation polyhedronSegmentation(&partitionMap, &uselessPartitionIndices, &mesh);
+	PolyhedronSegmentation polyhedronSegmentation(&partitionManager, &mesh);
 	polyhedronSegmentation.Run(outputPath + fileName + "/PolyhedronSegmentation/");
 
 	printf("done");

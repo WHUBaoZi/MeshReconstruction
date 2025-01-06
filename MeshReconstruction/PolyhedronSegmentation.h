@@ -8,11 +8,13 @@ class Polyhedron
 {
 public:
 	Mesh polyhedronMesh;
-	std::vector<Partition> partitions;
+	Point_3 centroidPoint;
+	Tree polyhedronTree;
+	std::vector<PartitionSet*> partitions;
 	std::vector<int> planeIntersectionNums;
 
 public:
-	Polyhedron(Mesh polyhedronMesh, std::vector<Partition> parentPartitions);
+	Polyhedron(Mesh polyhedronMesh, std::vector<PartitionSet*> parentPartitions);
 
 	Mesh DrawPlanesMesh();
 
@@ -22,20 +24,18 @@ public:
 class PolyhedronSegmentation
 {
 public:
-	const Mesh* mesh = nullptr;
+	Mesh* mesh = nullptr;
 	
 	Mesh cubeMesh;
 	
-	const std::map<int, Partition>* partitionMap = nullptr;
+	PartitionManager* partitionManager = nullptr;
 
-	std::set<int>* uselessPartitionIndices = nullptr;
+	std::queue<std::shared_ptr<Polyhedron>> polyhedrons;
 
-	std::queue<Polyhedron> polyhedrons;
-
-	std::vector<Polyhedron> indivisiblePolyhedrons;
+	std::vector<std::shared_ptr<Polyhedron>> indivisiblePolyhedrons;
 
 public:
-	PolyhedronSegmentation(const std::map<int, Partition>* partitionMap, std::set<int>* uselessPartitionIndices, const Mesh* mesh);
+	PolyhedronSegmentation(PartitionManager* partitionManager, Mesh* mesh);
 
 	Mesh Run(std::string outputPath);
 };

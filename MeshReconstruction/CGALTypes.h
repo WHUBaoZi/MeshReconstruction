@@ -5,12 +5,17 @@
 #include <CGAL/Polyhedron_3.h>
 #include <CGAL/Polygon_2.h>
 #include <CGAL/Triangle_3.h>
+#include <CGAL/Direction_3.h>
 
 #include <CGAL/Polygon_mesh_processing/IO/polygon_mesh_io.h>
 #include <CGAL/Polygon_mesh_processing/clip.h>
 #include <CGAL/Polygon_mesh_processing/compute_normal.h>
 #include <CGAL/Polygon_mesh_processing/connected_components.h>
 #include <CGAL/Polygon_mesh_processing/internal/Snapping/snap.h>
+
+#include <CGAL/Surface_mesh_simplification/edge_collapse.h>
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_length_stop_predicate.h>
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_count_ratio_stop_predicate.h>
 
 #include <CGAL/boost/graph/IO/OBJ.h>
 #include <CGAL/boost/graph/IO/OFF.h>
@@ -31,6 +36,7 @@ typedef Kernel::Point_2 Point_2;
 typedef Kernel::Point_3 Point_3;
 typedef Kernel::Plane_3 Plane_3;
 typedef Kernel::Vector_3 Vector_3;
+typedef Kernel::Direction_3 Direction_3;
 typedef Kernel::Triangle_3 Triangle_3;
 typedef Kernel::Line_3 Line_3;
 typedef Kernel::Ray_3 Ray;
