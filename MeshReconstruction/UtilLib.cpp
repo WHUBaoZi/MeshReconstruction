@@ -1,6 +1,6 @@
 #include "UtilLib.h"
 
-void UtilLib::MeshFiltering(Mesh& mesh, int iterCount)
+void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 {
 	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
 	// 设置距离权重公式的σ,角度权重公式的θ
@@ -30,7 +30,7 @@ void UtilLib::MeshFiltering(Mesh& mesh, int iterCount)
 			filteredNormalMap[face] = Vector_3(0, 0, 0);
 			Point_3 centerPi = GetFaceCenter(face, mesh);
 			Vector_3 normalFi = fNormalMap[face];
-			auto oneRingFaces = GetTriFacesKRing(face, 1, mesh);
+			auto oneRingFaces = GetKRingFaces(face, 1, mesh);
 			for (auto neighborFace : oneRingFaces)
 			{
 				double alpha = 0, beta = 0;		// 权重
@@ -96,10 +96,10 @@ Point_3 UtilLib::GetFaceCenter(const face_descriptor& face, const Mesh& mesh)
 	return centerPoint;
 }
 
-std::set<face_descriptor> UtilLib::GetTriFacesKRing(const face_descriptor& face, int kRing, const Mesh& mesh)
+std::set<face_descriptor> UtilLib::GetKRingFaces(const face_descriptor& face, int kRing, const Mesh& mesh)
 {
 	std::set<face_descriptor> faces;
-	faces.insert(face);
+	faces.insert(face); // contain self
 	std::set<vertex_descriptor> vertices;
 	std::queue<std::pair<face_descriptor, int>> faceQueue;
 	faceQueue.push(std::make_pair(face, 0));
@@ -135,24 +135,10 @@ std::set<face_descriptor> UtilLib::GetTriFacesKRing(const face_descriptor& face,
 	return faces;
 }
 
-
-double UtilLib::ComputeVPlanarityOfKRing(const vertex_descriptor& vertex, int kRing, const Mesh& mesh)
-{
-	std::set<vertex_descriptor> neighbors = GetVerticesKRing(vertex, kRing, mesh);
-	std::vector<Point_3> points;
-	for (auto vertex : neighbors)
-	{
-		points.push_back(mesh.point(vertex));
-	}
-	Plane_3 plane;
-	double planarity = linear_least_squares_fitting_3(points.begin(), points.end(), plane, CGAL::Dimension_tag<0>());
-	return planarity;
-}
-
-std::set<vertex_descriptor> UtilLib::GetVerticesKRing(const vertex_descriptor& vertex, int kRing, const Mesh& mesh)
+std::set<vertex_descriptor> UtilLib::GetKRingVertices(const vertex_descriptor& vertex, int kRing, const Mesh& mesh)
 {
 	std::set<vertex_descriptor> vertices;
-	vertices.insert(vertex);
+	vertices.insert(vertex); // contain self
 	std::queue<std::pair<vertex_descriptor, int>> verticesQueue;
 	verticesQueue.push(std::make_pair(vertex, 0));
 	while (!verticesQueue.empty())
@@ -176,7 +162,7 @@ std::set<vertex_descriptor> UtilLib::GetVerticesKRing(const vertex_descriptor& v
 	return vertices;
 }
 
-std::vector<vertex_descriptor> UtilLib::GetVerticesAroundFace(const CGAL::SM_Face_index& face, const Mesh& mesh)
+std::vector<vertex_descriptor> UtilLib::GetFaceVertices(const CGAL::SM_Face_index& face, const Mesh& mesh)
 {
 	std::vector<vertex_descriptor> vertices;
 	for (halfedge_descriptor halfedge : CGAL::halfedges_around_face(mesh.halfedge(face), mesh))
@@ -186,7 +172,25 @@ std::vector<vertex_descriptor> UtilLib::GetVerticesAroundFace(const CGAL::SM_Fac
 	return vertices;
 }
 
-CGAL::Color UtilLib::GetRandomColor()
+Plane_3 UtilLib::FitPlaneFromFaces(const std::set<face_descriptor> faces, const Mesh& mesh)
+{
+	std::set<vertex_descriptor> vertices;
+	for (const auto& face : faces)
+	{
+		auto verticesOfFace = GetFaceVertices(face, mesh);
+		vertices.insert(verticesOfFace.begin(), verticesOfFace.end());
+	}
+	std::vector<Point_3> points;
+	for (const auto& vertex : vertices)
+	{
+		points.emplace_back(mesh.point(vertex));
+	}
+	Plane_3 plane;
+	CGAL::linear_least_squares_fitting_3(points.begin(), points.end(), plane, CGAL::Dimension_tag<0>());
+	return plane;
+}
+
+CGAL::Color UtilLib::GenerateRandomColor()
 {
 	int R = -1; int G = -1; int B = -1;
 	while (R < 150) { R = rand() % 256; }
@@ -195,17 +199,17 @@ CGAL::Color UtilLib::GetRandomColor()
 	return CGAL::Color(R, G, B);
 }
 
-std::set<int> UtilLib::GetPartitionNeighbors(int id, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
+std::set<int> UtilLib::GetPartitionNeighbors(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
 {
 	auto fChartMap = mesh.property_map<face_descriptor, int>("f:chart").first;
 	std::set<int> neighbors;
-	for (auto face : partitionFacesMap.at(id))
+	for (auto face : partitionFacesMap.at(partitionId))
 	{
 		for (const auto& neighbor : CGAL::faces_around_face(mesh.halfedge(face), mesh))
 		{
 			if (neighbor != Mesh::null_face())
 			{
-				if (fChartMap[neighbor] != id)
+				if (fChartMap[neighbor] != partitionId)
 				{
 					neighbors.insert(fChartMap[neighbor]);
 				}
@@ -215,19 +219,19 @@ std::set<int> UtilLib::GetPartitionNeighbors(int id, const std::map<int, std::se
 	return neighbors;
 }
 
-Vector_3 UtilLib::GetPartitionAverageNormal(int id, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
+Vector_3 UtilLib::GetPartitionAverageNormal(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
 {
 	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
 	Vector_3 normal(0.0, 0.0, 0.0);
-	for (const auto& face : partitionFacesMap.at(id))
+	for (const auto& face : partitionFacesMap.at(partitionId))
 	{
 		normal += fNormalMap[face];
 	}
-	normal /= partitionFacesMap.at(id).size();
+	normal /= partitionFacesMap.at(partitionId).size();
 	return normal;
 }
 
-Mesh UtilLib::MakeCube(const Point_3& minPoint, const Point_3& maxPoint)
+Mesh UtilLib::CreateCube(const Point_3& minPoint, const Point_3& maxPoint)
 {
 	Mesh cubeMesh;
 	vertex_descriptor v0 = cubeMesh.add_vertex(minPoint);
@@ -253,27 +257,6 @@ Mesh UtilLib::MakeCube(const Point_3& minPoint, const Point_3& maxPoint)
 	cubeMesh.add_face(v1, v3, v2);
 	
 	return cubeMesh;
-}
-
-
-bool UtilLib::IsPolyhedronValid(const Mesh& mesh)
-{
-	bool bIsValid = false;
-	// Mesh has vertex that actually exists
-	for (const auto& vertex : mesh.vertices())
-	{
-		bIsValid = true;
-		break;
-	}
-	// Mesh has only one component
-	std::map<Mesh::Face_index, std::size_t> face_component_map;
-	boost::associative_property_map<std::map<Mesh::Face_index, std::size_t>> fcm(face_component_map);
-	if (CGAL::Polygon_mesh_processing::connected_components(mesh, fcm) > 1)
-	{
-		bIsValid = false;
-	}
-
-	return bIsValid;
 }
 
 Vector_3 compute_orthogonal_vector(const Vector_3& normal)

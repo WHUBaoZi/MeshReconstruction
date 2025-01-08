@@ -4,8 +4,9 @@ Partition::Partition()
 {
 }
 
-Partition::Partition(std::pair<int, std::set<face_descriptor>> indexFacesPair, std::map<int, Partition>* partitionMap, Mesh* mesh) : partitionIndex(indexFacesPair.first), faces(indexFacesPair.second), partitionMap(partitionMap), mesh(mesh)
+Partition::Partition(int partitionIndex, PartitionManager* partitionManager, Mesh* mesh) : partitionIndex(partitionIndex), partitionManager(partitionManager), mesh(mesh)
 {
+	faces = partitionManager->partitionFacesMap[partitionIndex];
 	CalculateAverageNormal();
 	CalculateBorderPoints();
 	area = CGAL::Polygon_mesh_processing::area(faces, *mesh);
@@ -148,8 +149,121 @@ PartitionManager::PartitionManager()
 {
 }
 
-PartitionManager::PartitionManager(const std::map<int, Partition>* partitionMap): partitionMap(partitionMap)
+PartitionManager::PartitionManager(Mesh* mesh): mesh(mesh)
 {
+}
+
+void PartitionManager::PartitionSegmentation()
+{
+	int kRing = 3;
+	double dist = 0.3;
+	double squaredDist = dist * dist;
+	auto fChartMap = mesh->add_property_map<face_descriptor, int>("f:chart", -1).first;
+	auto fColorMap = mesh->add_property_map<face_descriptor, CGAL::Color>("f:color", CGAL::Color(0, 0, 0)).first;
+	auto fNormalMap = mesh->add_property_map<face_descriptor, Vector_3>("f:normal", CGAL::NULL_VECTOR).first;
+	auto fPlanarityMap = mesh->add_property_map<face_descriptor, double>("f:planarity", -9999).first;
+	auto vPlanarityMap = mesh->add_property_map<vertex_descriptor, double>("v:planarity", -9999).first;
+	CGAL::Polygon_mesh_processing::compute_face_normals(*mesh, fNormalMap);
+	//UtilLib::FilterMesh(*mesh, 10);
+
+#pragma region Compute Planarity
+	for (const auto& vertex : mesh->vertices())
+	{
+		std::vector<Point_3> points;
+		for (auto vertex : UtilLib::GetKRingVertices(vertex, kRing, *mesh))
+		{
+			points.push_back(mesh->point(vertex));
+		}
+		Plane_3 plane;
+		double planarity = linear_least_squares_fitting_3(points.begin(), points.end(), plane, CGAL::Dimension_tag<0>());
+		vPlanarityMap[vertex] = planarity;
+	}
+	for (auto face : mesh->faces())
+	{
+		double sum = 0.0;
+		std::vector<vertex_descriptor> vertices = UtilLib::GetFaceVertices(face, *mesh);
+		for (const auto& vertex : vertices)
+		{
+			sum += vPlanarityMap[vertex];
+		}
+		fPlanarityMap[face] = sum / vertices.size();
+	}
+#pragma endregion
+
+
+#pragma region Partition Segmentation
+	std::vector<face_descriptor> faces;
+	for (const auto& face : mesh->faces())
+	{
+		faces.push_back(face);
+	}
+	// Æ½Ãæ¶È½µÐò
+	std::sort(faces.begin(), faces.end(), [&](const face_descriptor& a, const face_descriptor& b) {return fPlanarityMap[a] > fPlanarityMap[b]; });
+	std::queue<face_descriptor> facesQueue;
+	for (const auto& face : faces)
+	{
+		facesQueue.push(face);
+	}
+	int currentType = 0;
+	CGAL::Color currentColor = UtilLib::GenerateRandomColor();
+	while (!facesQueue.empty())
+	{
+		face_descriptor seed = facesQueue.front();
+		facesQueue.pop();
+		if (fChartMap[seed] != -1)
+		{
+			continue;
+		}
+		auto seedKRing = UtilLib::GetKRingFaces(seed, kRing, *mesh);
+		Plane_3 plane = UtilLib::FitPlaneFromFaces(seedKRing, *mesh);
+		std::set<face_descriptor> partitionFaces;
+		std::set<face_descriptor> facesInLoop;
+		partitionFaces.insert(seed);
+		facesInLoop.insert(seed);
+		fChartMap[seed] = currentType;
+		fColorMap[seed] = currentColor;
+		while (!facesInLoop.empty())
+		{
+			std::set<face_descriptor> neighborFaces;
+			for (const auto& face : facesInLoop)
+			{
+				for (const auto& neighborFace : UtilLib::GetKRingFaces(face, 1, *mesh))
+				{
+					if (fChartMap[neighborFace] != -1)
+					{
+						continue;
+					}
+					bool bIsWithinTolerance = true;
+					for (const auto& vertex : UtilLib::GetFaceVertices(neighborFace, *mesh))
+					{
+						if (CGAL::squared_distance(mesh->point(vertex), plane) > squaredDist)
+						{
+							bIsWithinTolerance = false;
+							break;
+						}
+					}
+					if (bIsWithinTolerance)
+					{
+						neighborFaces.insert(neighborFace);
+						partitionFaces.insert(neighborFace);
+						fChartMap[neighborFace] = currentType;
+						fColorMap[neighborFace] = currentColor;
+					}
+				}
+			}
+			facesInLoop.clear();
+			facesInLoop.insert(neighborFaces.begin(), neighborFaces.end());
+			plane = UtilLib::FitPlaneFromFaces(partitionFaces, *mesh);
+		}
+		partitionFacesMap.insert(std::make_pair(currentType, partitionFaces));
+		currentType++;
+		currentColor = UtilLib::GenerateRandomColor();
+	}
+#pragma endregion
+	for (const auto& pair : partitionFacesMap)
+	{
+		partitionMap.insert(std::make_pair(pair.first, Partition(pair.first, this, mesh)));
+	}
 }
 
 int PartitionManager::GetFreeIndex()

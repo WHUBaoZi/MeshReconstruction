@@ -3,16 +3,17 @@
 #include "UtilLib.h"
 
 class PartitionSet;
+class PartitionManager;
 
 class Partition
 {
 public:
 	Partition();
-	Partition(std::pair<int, std::set<face_descriptor>> indexFacesPair, std::map<int, Partition>* partitionMap, Mesh* mesh);
+	Partition(int partitionIndex, PartitionManager* partitionManager, Mesh* mesh);
 public:
 	Mesh* mesh = nullptr;
-	std::map<int, Partition>* partitionMap = nullptr;
 	int partitionIndex = -1;
+	PartitionManager* partitionManager = nullptr;
 	std::set<face_descriptor> faces;
 	std::set<vertex_descriptor> vertices;
 	std::set<Point_3> points;
@@ -59,12 +60,16 @@ class PartitionManager
 {
 public:
 	PartitionManager();
-	PartitionManager(const std::map<int, Partition>* partitionMap);
+	PartitionManager(Mesh* mesh);
 
 public:
-	const std::map<int, Partition>* partitionMap = nullptr;
+	Mesh* mesh = nullptr;
+	std::map<int, std::set<face_descriptor>> partitionFacesMap;
+	std::map<int, Partition> partitionMap;
 	std::map<int, PartitionSet> partitionSetMap;
 
 public:
+	void PartitionSegmentation();
+
 	int GetFreeIndex();
 };

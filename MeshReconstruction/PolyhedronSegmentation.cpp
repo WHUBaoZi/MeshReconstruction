@@ -63,7 +63,7 @@ PolyhedronSegmentation::PolyhedronSegmentation(PartitionManager* partitionManage
 		minPoint = Point_3(std::min(minPoint.x(), point.x()), std::min(minPoint.y(), point.y()), std::min(minPoint.z(), point.z()));
 		maxPoint = Point_3(std::max(maxPoint.x(), point.x()), std::max(maxPoint.y(), point.y()), std::max(maxPoint.z(), point.z()));
 	}
-	cubeMesh = UtilLib::MakeCube(minPoint, maxPoint);
+	cubeMesh = UtilLib::CreateCube(minPoint, maxPoint);
 #pragma endregion
 }
 
@@ -89,7 +89,14 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 		}
 		auto polyhedron = std::make_shared<Polyhedron>(cubeMesh, partitions);
 		polyhedrons.push(polyhedron);
-		CGAL::IO::write_OBJ(outputPath + "Original_PolyhedronPlanes.obj", Polyhedron(cubeMesh, allPartitions).DrawPlanesMesh());
+		boost::filesystem::create_directories(outputPath + "ClipPlanes");
+		CGAL::IO::write_OBJ(outputPath + "ClipPlanes/Original_PolyhedronPlanes.obj", Polyhedron(cubeMesh, allPartitions).DrawPlanesMesh());
+		for (const auto& partition : partitions)
+		{
+			Mesh partitionSetMesh;
+			UtilLib::CreatePlaneMesh(partition->clipPlane, partition->averageCenterPoint, partitionSetMesh);
+			CGAL::IO::write_OBJ(outputPath + "ClipPlanes/PartitionSet_" + std::to_string(partition->partitionSetIndex) + ".obj", partitionSetMesh);
+		}
 	}
 
 	int loopNum = 1;

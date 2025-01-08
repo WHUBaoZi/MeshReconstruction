@@ -8,6 +8,7 @@
 #include <cmath>
 #include <chrono>
 #include <iostream>
+#include <format>
 
 #include <boost/filesystem.hpp>
 
@@ -23,27 +24,25 @@ namespace UtilLib
 
 	constexpr double INF = std::numeric_limits<double>::infinity();
 
-	void MeshFiltering(Mesh& mesh, int iterCount);
+	void FilterMesh(Mesh& mesh, int iterCount);
 
 	Point_3 GetFaceCenter(const face_descriptor& face, const Mesh& mesh);
 
-	std::set<face_descriptor> GetTriFacesKRing(const face_descriptor& face, int kRing, const Mesh& mesh);
+	std::set<face_descriptor> GetKRingFaces(const face_descriptor& face, int kRing, const Mesh& mesh);	// Contain self; Only for Triangle Face
 
-	double ComputeVPlanarityOfKRing(const vertex_descriptor& vertex, int kRing, const Mesh& mesh);
+	std::set<vertex_descriptor> GetKRingVertices(const vertex_descriptor& vertex, int kRing, const Mesh& mesh);	// Contain self
 
-	std::set<vertex_descriptor> GetVerticesKRing(const vertex_descriptor& vertex, int kRing, const Mesh& mesh);
+	std::vector<vertex_descriptor> GetFaceVertices(const CGAL::SM_Face_index& face, const Mesh& mesh);
 
-	std::vector<vertex_descriptor> GetVerticesAroundFace(const CGAL::SM_Face_index& face, const Mesh& mesh);
+	Plane_3 FitPlaneFromFaces(const std::set<face_descriptor> faces, const Mesh& mesh);
 
-	CGAL::Color GetRandomColor();
+	CGAL::Color GenerateRandomColor();
 
-	std::set<int> GetPartitionNeighbors(int id, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
+	std::set<int> GetPartitionNeighbors(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
 
-	Vector_3 GetPartitionAverageNormal(int id, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
+	Vector_3 GetPartitionAverageNormal(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
 
-	Mesh MakeCube(const Point_3& minPoint, const Point_3& maxPoint);
-
-	bool IsPolyhedronValid(const Mesh& mesh);
+	Mesh CreateCube(const Point_3& minPoint, const Point_3& maxPoint);
 
 	void CreatePlaneMesh(const Plane_3& plane, const Point_3& centerPoint, Mesh& mesh, double size = 2.0);
 

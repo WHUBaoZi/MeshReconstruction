@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 
 	double angleTolerance = 10.0;
 
-#pragma region Input mesh file
+#pragma region Input mesh file & Centralize Mesh
 	int maxPartitionsNum = 20;
 	std::string inputFile = "../Data/chosenTestData/test6.obj";
 	std::string outputPath = "../Data/Output/";
@@ -42,57 +42,47 @@ int main(int argc, char* argv[])
 #pragma region Mesh Partition
 	std::cout << "Start Mesh Partition..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
-	auto partitionFacesMap = MeshPartition(mesh);
+	//auto partitionFacesMap = MeshPartition(mesh);
+	PartitionManager partitionManager(&mesh);
+	partitionManager.PartitionSegmentation();
 	auto fColorMap = mesh.property_map<face_descriptor, CGAL::Color>("f:color").first;
 	CGAL::IO::write_OFF(outputPath + fileName + "/" + fileName + "_PartitionMesh.off", mesh, CGAL::parameters::face_color_map(fColorMap));
+	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
 	end = std::chrono::high_resolution_clock::now();
 	timings.emplace_back(std::make_pair("Mesh Partition", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
 	std::cout << "Mesh Partition finished. Time taken: " << timings[0].second << " seconds" << std::endl;
 #pragma endregion
 
 
-#pragma region Get Partition Planes
+#pragma region Remove partitions that has proximal fit plane
 	std::cout << "Start Partition Optimization..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
-	std::map<int, Partition> partitionMap;
-	double thresholdCosine = std::cos(10.0 * UtilLib::DEG_TO_RAD);
-	for (const auto& pair : partitionFacesMap)
-	{
-		Partition partition(pair, &partitionMap, &mesh);
-		partitionMap.emplace(std::make_pair(pair.first, partition));
-	}
-#pragma endregion
-
-
-#pragma region Remove partitions that has proximal fit plane
-	PartitionManager partitionManager(&partitionMap);
-
 	std::vector<int> partitionIndices;
-	for (const auto& pair : partitionMap)
+	for (const auto& pair : partitionManager.partitionMap)
 	{
 		partitionIndices.emplace_back(pair.first);
 	}
 	for (size_t i = 0; i < partitionIndices.size() - 1; i++)
 	{
 		int indexI = partitionIndices[i];
-		if (partitionMap[indexI].partitionSet)
+		if (partitionManager.partitionMap[indexI].partitionSet)
 		{
 			continue;
 		}
 		int partitionSetIndex = partitionManager.GetFreeIndex();
 		partitionManager.partitionSetMap.emplace(std::make_pair(partitionSetIndex, PartitionSet(partitionSetIndex)));
 		PartitionSet* partitionSet = &partitionManager.partitionSetMap[partitionSetIndex];
-		partitionSet->InsertPartition(&partitionMap[indexI]);
+		partitionSet->InsertPartition(&partitionManager.partitionMap[indexI]);
 		for (size_t j = i + 1; j < partitionIndices.size(); j++)
 		{
 			int indexJ = partitionIndices[j];
-			if (partitionMap[indexJ].partitionSet)
+			if (partitionManager.partitionMap[indexJ].partitionSet)
 			{
 				continue;
 			}
-			if (Partition::CheckPartitionProximity(partitionMap[indexI], partitionMap[indexJ], angleTolerance))
+			if (Partition::CheckPartitionProximity(partitionManager.partitionMap[indexI], partitionManager.partitionMap[indexJ], angleTolerance))
 			{
-				partitionSet->InsertPartition(&partitionMap[indexJ]);
+				partitionSet->InsertPartition(&partitionManager.partitionMap[indexJ]);
 			}
 		}
 	}
@@ -120,7 +110,7 @@ int main(int argc, char* argv[])
 	}
 	end = std::chrono::high_resolution_clock::now();
 	timings.emplace_back(std::make_pair("Partition Optimization", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-	std::cout << "Partition Optimization finished. Time taken: " << timings[0].second << " seconds" << std::endl;
+	std::cout << "Partition Optimization finished. Time taken: " << timings[1].second << " seconds" << std::endl;
 
 #pragma endregion
 	std::cout << "Start Polyhedron Segmentation..." << std::endl;
@@ -129,7 +119,7 @@ int main(int argc, char* argv[])
 	polyhedronSegmentation.Run(outputPath + fileName + "/PolyhedronSegmentation/");
 	end = std::chrono::high_resolution_clock::now();
 	timings.emplace_back(std::make_pair("Polyhedron Segmentation", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-	std::cout << "Polyhedron Segmentation finished. Time taken: " << timings[0].second << " seconds" << std::endl;
+	std::cout << "Polyhedron Segmentation finished. Time taken: " << timings[2].second << " seconds" << std::endl;
 
 	std::cout << "All Done" << std::endl;
 }
@@ -150,18 +140,25 @@ std::map<int, std::set<face_descriptor>> MeshPartition(Mesh& mesh)
 	CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
 
 	// Mesh filter
-	UtilLib::MeshFiltering(mesh, 10);
+	UtilLib::FilterMesh(mesh, 10);
 
 	// Planarity compute
 	for (auto vertex : mesh.vertices())
 	{
-		vPlanarityMap[vertex] = UtilLib::ComputeVPlanarityOfKRing(vertex, kRing, mesh);
+		std::vector<Point_3> points;
+		for (auto vertex : UtilLib::GetKRingVertices(vertex, kRing, mesh))
+		{
+			points.push_back(mesh.point(vertex));
+		}
+		Plane_3 plane;
+		double planarity = linear_least_squares_fitting_3(points.begin(), points.end(), plane, CGAL::Dimension_tag<0>());
+		vPlanarityMap[vertex] = planarity;
 	}
 
 	for (auto face : mesh.faces())
 	{
 		double sum = 0.0;
-		std::vector<vertex_descriptor> vertices = UtilLib::GetVerticesAroundFace(face, mesh);
+		std::vector<vertex_descriptor> vertices = UtilLib::GetFaceVertices(face, mesh);
 		for (const auto& vertex : vertices)
 		{
 			sum += vPlanarityMap[vertex];
@@ -199,7 +196,7 @@ std::map<int, std::set<face_descriptor>> PartitionByNormal(double divideAngle, M
 	double biggerDivideAngle = 3.0 * divideAngle;
 	const double verticalDot = std::cos(70.0 * PI / 180.0), horizontalDot = std::cos(15.0 * PI / 180.0);
 	int currentType = 0;
-	CGAL::Color currentColor = UtilLib::GetRandomColor();
+	CGAL::Color currentColor = UtilLib::GenerateRandomColor();
 	while (!facesQueue.empty())
 	{
 		face_descriptor seed = facesQueue.front();
@@ -271,7 +268,7 @@ std::map<int, std::set<face_descriptor>> PartitionByNormal(double divideAngle, M
 			clusterFaces.insert(newClusterFaces.begin(), newClusterFaces.end());
 		}
 		currentType++;
-		currentColor = UtilLib::GetRandomColor();
+		currentColor = UtilLib::GenerateRandomColor();
 	}
 
 	return partitionFacesMap;
