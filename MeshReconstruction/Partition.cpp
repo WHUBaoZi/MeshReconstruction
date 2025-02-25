@@ -112,7 +112,7 @@ void PartitionSet::RemovePartition(Partition* partition)
 	totalArea -= partition->area;
 }
 
-void PartitionSet::Activate()
+void PartitionSet::UpdateMean()
 {
 	averageNormal = Vector_3(0.0, 0.0, 0.0);
 	Vector_3 sumCenterVector(0.0, 0.0, 0.0);

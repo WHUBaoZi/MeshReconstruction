@@ -45,12 +45,12 @@ public:
 	Vector_3 averageNormal = Vector_3(0.0, 0.0, 0.0);
 	Point_3 averageCenterPoint = Point_3(0.0, 0.0, 0.0);
 	double totalArea = 0.0;
-	bool bIsValid = true;
+	bool bIsValid = false;
 
 public:
 	void InsertPartition(Partition* partition);
 	void RemovePartition(Partition* partition);
-	void Activate();
+	void UpdateMean();
 	std::set<Point_3> GetCoveredPoints();
 	void DrawPlane();
 };

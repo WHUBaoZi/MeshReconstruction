@@ -1,4 +1,5 @@
 #include <omp.h>
+//#include <Python.h>
 
 #include "UtilLib.h"
 #include "CGALTypes.h"
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
 
 
 #pragma region Mesh Partition
-	std::cout << "Start Mesh Partition..." << std::endl;
+	std::cout << "Start Mesh partition..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
 	//auto partitionFacesMap = MeshPartition(mesh);
 	PartitionManager partitionManager(&mesh);
@@ -49,13 +50,12 @@ int main(int argc, char* argv[])
 	CGAL::IO::write_OFF(outputPath + fileName + "/" + fileName + "_PartitionMesh.off", mesh, CGAL::parameters::face_color_map(fColorMap));
 	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
 	end = std::chrono::high_resolution_clock::now();
-	timings.emplace_back(std::make_pair("Mesh Partition", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-	std::cout << "Mesh Partition finished. Time taken: " << timings[0].second << " seconds" << std::endl;
+	timings.emplace_back(std::make_pair("Mesh partition", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+	std::cout << "Mesh partition finished. Time taken: " << timings[0].second << " seconds" << std::endl;
 #pragma endregion
 
-
-#pragma region Remove partitions that has proximal fit plane
-	std::cout << "Start Partition Optimization..." << std::endl;
+#pragma region Merge partitions that has proximal fit plane
+	std::cout << "Start partition merge..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
 	std::vector<int> partitionIndices;
 	for (const auto& pair : partitionManager.partitionMap)
@@ -86,33 +86,115 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-#pragma endregion
-
 	for (auto& pair : partitionManager.partitionSetMap)
 	{
-		pair.second.Activate();
+		pair.second.UpdateMean();
 	}
+	end = std::chrono::high_resolution_clock::now();
+	timings.emplace_back(std::make_pair("Partition Merge", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+	std::cout << "Partition Merge finished. Time taken: " << timings[1].second << " seconds" << std::endl;
+#pragma endregion
 
-#pragma region Remove partitions with small area
+#pragma region Optimize
+	std::cout << "Start partition set Optimize..." << std::endl;
+	start = std::chrono::high_resolution_clock::now();
+
+	double minArea = 2;		// Min area of a PartitionSet
+	double threshold = 0.9;
 	std::vector<int> partitionSetIndices;
-	for (const auto& pair : partitionManager.partitionSetMap)
+	for (auto& pair : partitionManager.partitionSetMap)
 	{
 		partitionSetIndices.push_back(pair.first);
 	}
 	std::sort(partitionSetIndices.begin(), partitionSetIndices.end(), [&](const int& indexA, const int& indexB) {return partitionManager.partitionSetMap[indexA].totalArea > partitionManager.partitionSetMap[indexB].totalArea; });
-
+	
+	double sum = 0.0;
 	for (size_t i = 0; i < partitionSetIndices.size(); i++)
 	{
-		if (i > maxPartitionsNum - 1)
+		int partitionSetIndex = partitionSetIndices[i];
+		sum += partitionManager.partitionSetMap[partitionSetIndex].totalArea;
+	}
+	double currentSum = 0.0;
+	for (size_t i = 0; i < partitionSetIndices.size(); i++)
+	{
+		int partitionSetIndex = partitionSetIndices[i];
+		double area = partitionManager.partitionSetMap[partitionSetIndex].totalArea;
+		if (area < minArea)
 		{
-			partitionManager.partitionSetMap[partitionSetIndices[i]].bIsValid = false;
+			break;
+		}
+		currentSum += area;
+		partitionManager.partitionSetMap[partitionSetIndex].bIsValid = true;
+		if (currentSum / sum > threshold)
+		{
+			break;
 		}
 	}
 	end = std::chrono::high_resolution_clock::now();
-	timings.emplace_back(std::make_pair("Partition Optimization", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-	std::cout << "Partition Optimization finished. Time taken: " << timings[1].second << " seconds" << std::endl;
+	timings.emplace_back(std::make_pair("PartitionSet Optimize", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+	std::cout << "Partition set optimize finished. Time taken: " << timings[2].second << " seconds" << std::endl;
 
+	/*std::ofstream outFile("../Python/Source/PartitionSetAreas.txt");
+	if (!outFile) 
+	{
+		std::cerr << "Error: Cannot open file for writing!" << std::endl;
+		return 1;
+	}
+	for (const auto& val : partitionSetArea)
+	{
+		outFile << val << std::endl;
+	}
+	outFile.close();
+	Py_Initialize();
+	if (!Py_IsInitialized())
+	{
+		std::cerr << "Failed to initialize Python!" << std::endl;
+		return -1;
+	}
+	PyRun_SimpleString("import os,sys");
+	PyRun_SimpleString("sys.path.append('../Python/Source')");
+	PyObject* pModule;
+	PyObject* pFunction;
+	PyObject* pArgs;
+	PyObject* pRetValue;
+	pModule = PyImport_ImportModule("PartitionOptimize");
+	if (!pModule)
+	{
+		std::cerr << "Failed to import Module!" << std::endl;
+		return -1;
+	}
+	pFunction = PyObject_GetAttrString(pModule, "partition_optimize");
+	if (!pFunction)
+	{
+		std::cerr << "Get python function failed!" << std::endl;
+		return -1;
+	}
+	PyObject* pListArea = PyList_New(partitionSetArea.size());
+	for (size_t i = 0; i < partitionSetArea.size(); i++)
+	{
+		PyList_SetItem(pListArea, i, PyFloat_FromDouble(partitionSetArea[i]));
+	}
+	pArgs = PyTuple_New(1);
+	PyTuple_SetItem(pArgs, 0, pListArea);
+	std::vector<int> retValue;
+	pRetValue = PyObject_CallObject(pFunction, pArgs);
+	if (pRetValue && PyList_Check(pRetValue))
+	{
+		Py_ssize_t size = PyList_Size(pRetValue);
+		retValue.reserve(size);
+		for (Py_ssize_t i = 0; i < size; i++)
+		{
+			retValue.push_back(PyLong_AsLong(PyList_GetItem(pRetValue, i)));
+		}
+	}
+	else
+	{
+		PyErr_Print();
+	}
+	Py_Finalize();*/
 #pragma endregion
+
+
 	std::cout << "Start Polyhedron Segmentation..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
 	PolyhedronSegmentation polyhedronSegmentation(&partitionManager, &mesh);
