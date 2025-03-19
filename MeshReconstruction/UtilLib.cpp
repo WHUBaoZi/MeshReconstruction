@@ -3,6 +3,12 @@
 void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 {
 	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
+	if (!fNormalMap)
+	{
+		fNormalMap = mesh.add_property_map<face_descriptor, Vector_3>("f:normal").first;
+		CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
+	}
+
 	// 设置距离权重公式的σ,角度权重公式的θ
 	double sigma = 0, sita = 20 * PI / 180;	// θ初始化为20°
 	double standardDot = std::cos(sita);
@@ -349,4 +355,50 @@ void UtilLib::CentralizeMesh(Mesh& mesh)
 		Point_3 p = mesh.point(v);
 		mesh.point(v) = Point_3(p.x() - center.x(), p.y() - center.y(), p.z() - center.z());
 	}
+}
+
+std::map<int, std::vector<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mesh)
+{
+	auto fNormalMap = mesh.add_property_map<face_descriptor, Vector_3>("f:normal", CGAL::NULL_VECTOR).first;
+	auto fChartMap = mesh.add_property_map<face_descriptor, int>("f:chart", -1).first;
+	auto fColorMap = mesh.add_property_map<face_descriptor, CGAL::Color>("f:color", CGAL::Color(0, 0, 0)).first;
+	std::map<int, std::vector<face_descriptor>> partitions;
+	CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
+	int currenType = 0;
+	CGAL::Color currentColor = GenerateRandomColor();
+	for (const auto& seed : mesh.faces())
+	{
+		if (fChartMap[seed] != -1)
+		{
+			continue;
+		}
+		std::queue<face_descriptor> facesQueue;
+		fChartMap[seed] = currenType;
+		fColorMap[seed] = currentColor;
+		partitions[currenType] = std::vector<face_descriptor>();
+		partitions[currenType].push_back(seed);
+		facesQueue.push(seed);
+		while (!facesQueue.empty())
+		{
+			face_descriptor face = facesQueue.front();
+			facesQueue.pop();
+			for (const auto& neighborFace : mesh.faces_around_face(mesh.halfedge(face)))
+			{
+				if (fChartMap[neighborFace] != -1)
+				{
+					continue;
+				}
+				if (fNormalMap[face] * fNormalMap[neighborFace] > std::cos(5 * DEG_TO_RAD))
+				{
+					fChartMap[neighborFace] = currenType;
+					fColorMap[neighborFace] = currentColor;
+					partitions[currenType].push_back(neighborFace);
+					facesQueue.push(neighborFace);
+				}
+			}
+		}
+		currenType++;
+		currentColor = GenerateRandomColor();
+	}
+	return partitions;
 }

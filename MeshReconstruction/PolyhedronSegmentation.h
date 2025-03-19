@@ -3,6 +3,7 @@
 #include "CGALTypes.h"
 #include "UtilLib.h"
 #include "Partition.h"
+#include "Voxel.h"
 
 class Polyhedron
 {

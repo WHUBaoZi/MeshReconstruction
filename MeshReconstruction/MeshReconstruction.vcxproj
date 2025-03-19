@@ -72,12 +72,15 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;$(Eigen_DIR);$(BOOST_INCLUDEDIR);C:\Python312\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(BOOST_LIBRARYDIR);$(CGAL_DIR)\auxiliary\gmp\lib;C:\Python312\libs;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;$(Eigen_DIR);$(BOOST_INCLUDEDIR);C:\Python312\include;C:\dev\vcpkg\installed\x64-windows\include;C:\Program Files\OpenVDB\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(BOOST_LIBRARYDIR);$(CGAL_DIR)\auxiliary\gmp\lib;C:\Python312\libs;C:\dev\vcpkg\installed\x64-windows\lib;C:\Program Files\OpenVDB\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(CGAL_DIR)\include;$(BOOST_INCLUDEDIR);$(Eigen_DIR);$(CGAL_DIR)\auxiliary\gmp\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(BOOST_LIBRARYDIR);$(CGAL_DIR)\auxiliary\gmp\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -131,13 +134,14 @@
       <ConformanceMode>true</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
       <Optimization>Disabled</Optimization>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libgmp-10.lib;libmpfr-4.lib;libboost_filesystem-vc143-mt-x64-1_86.lib;python312.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgmp-10.lib;libmpfr-4.lib;libboost_filesystem-vc143-mt-x64-1_86.lib;openvdb.lib;tbb12.lib;blosc.lib;zlib.lib;zstd.lib;lz4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -146,12 +150,14 @@
     <ClCompile Include="PolyhedronSegmentation.cpp" />
     <ClCompile Include="test.cpp" />
     <ClCompile Include="UtilLib.cpp" />
+    <ClCompile Include="Voxel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CGALTypes.h" />
     <ClInclude Include="Partition.h" />
     <ClInclude Include="PolyhedronSegmentation.h" />
     <ClInclude Include="UtilLib.h" />
+    <ClInclude Include="Voxel.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

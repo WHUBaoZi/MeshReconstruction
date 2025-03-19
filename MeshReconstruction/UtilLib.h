@@ -24,7 +24,7 @@ namespace UtilLib
 
 	constexpr double INF = std::numeric_limits<double>::infinity();
 
-	void FilterMesh(Mesh& mesh, int iterCount);
+	void FilterMesh(Mesh& mesh, int iterCount = 20);
 
 	Point_3 GetFaceCenter(const face_descriptor& face, const Mesh& mesh);
 
@@ -49,6 +49,8 @@ namespace UtilLib
 	Point_3 GetMeshCenterPoint(const Mesh& mesh);
 
 	void CentralizeMesh(Mesh& mesh);
+
+	std::map<int, std::vector<face_descriptor>> PartitionByNormal(Mesh& mesh);
 
 	inline Plane_3 ReversePlane(const Plane_3& plane) { return Plane_3(-plane.a(), -plane.b(), -plane.c(), -plane.d()); }
 

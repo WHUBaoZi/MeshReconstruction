@@ -44,6 +44,11 @@ int main(int argc, char* argv[])
 	std::cout << "Start Mesh partition..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
 	//auto partitionFacesMap = MeshPartition(mesh);
+	// Check Output Path
+	if (!outputPath.empty() && !boost::filesystem::exists(outputPath))
+	{
+		boost::filesystem::create_directories(outputPath);
+	}
 	PartitionManager partitionManager(&mesh);
 	partitionManager.PartitionSegmentation();
 	auto fColorMap = mesh.property_map<face_descriptor, CGAL::Color>("f:color").first;
