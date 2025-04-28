@@ -9,8 +9,8 @@ void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 		CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
 	}
 
-	// ÉèÖÃ¾àÀëÈ¨ÖØ¹«Ê½µÄ¦Ò,½Ç¶ÈÈ¨ÖØ¹«Ê½µÄ¦È
-	double sigma = 0, sita = 20 * PI / 180;	// ¦È³õÊ¼»¯Îª20¡ã
+	// è®¾ç½®è·ç¦»æƒé‡å…¬å¼çš„Ïƒ,è§’åº¦æƒé‡å…¬å¼çš„Î¸
+	double sigma = 0, sita = 20 * PI / 180;	// Î¸åˆå§‹åŒ–ä¸º20Â°
 	double standardDot = std::cos(sita);
 	{
 		double sum = 0;
@@ -24,10 +24,10 @@ void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 		}
 		sigma = sum / edgeCount;
 	}
-	// µü´úÂË²¨
+	// è¿­ä»£æ»¤æ³¢
 	for (size_t round = 0; round < iterCount; round++)
 	{
-		// ¼ÆËãÂË²¨ºóµÄ·¨ÏòÁ¿
+		// è®¡ç®—æ»¤æ³¢åçš„æ³•å‘é‡
 		std::map<face_descriptor, Vector_3> filteredNormalMap;
 		int idx = 0;
 		for (auto face : mesh.faces())
@@ -39,10 +39,10 @@ void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 			auto oneRingFaces = GetKRingFaces(face, 1, mesh);
 			for (auto neighborFace : oneRingFaces)
 			{
-				double alpha = 0, beta = 0;		// È¨ÖØ
+				double alpha = 0, beta = 0;		// æƒé‡
 				Vector_3 normalFj = fNormalMap[neighborFace];
 				double dot = normalFj * normalFi;
-				if (dot < standardDot)	// ¼Ğ½Ç´óÓÚãĞÖµÌø¹ı
+				if (dot < standardDot)	// å¤¹è§’å¤§äºé˜ˆå€¼è·³è¿‡
 				{
 					continue;
 				}
@@ -57,7 +57,7 @@ void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 			}
 			filteredNormalMap[face] /= std::sqrt(filteredNormalMap[face].squared_length());
 		}
-		// ¸ù¾İÂË²¨·¨ÏòÁ¿µ÷ÕûµãÎ»ÖÃ
+		// æ ¹æ®æ»¤æ³¢æ³•å‘é‡è°ƒæ•´ç‚¹ä½ç½®
 		idx = 0;
 		for (auto vertex : mesh.vertices())
 		{
@@ -75,7 +75,6 @@ void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 				Point_3 centerPointFk = GetFaceCenter(face, mesh);
 				Vector_3 vectorVC = centerPointFk - point;
 				deltaVector += CGAL::scalar_product(vectorVC, filteredNormalMap[face]) * fNormalMap[face];
-				deltaVector;
 			}
 			if (facesCount != 0)
 			{
@@ -83,6 +82,7 @@ void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 			}
 			mesh.point(vertex) += deltaVector;
 		}
+		CGAL::IO::write_OBJ("tmpFilteredMesh.obj", mesh);
 		CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
 	}
 }
@@ -205,10 +205,10 @@ CGAL::Color UtilLib::GenerateRandomColor()
 	return CGAL::Color(R, G, B);
 }
 
-std::set<int> UtilLib::GetPartitionNeighbors(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
+std::set<size_t> UtilLib::GetPartitionNeighbors(size_t partitionId, const std::map<size_t, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
 {
-	auto fChartMap = mesh.property_map<face_descriptor, int>("f:chart").first;
-	std::set<int> neighbors;
+	auto fChartMap = mesh.property_map<face_descriptor, size_t>("f:chart").first;
+	std::set<size_t> neighbors;
 	for (auto face : partitionFacesMap.at(partitionId))
 	{
 		for (const auto& neighbor : CGAL::faces_around_face(mesh.halfedge(face), mesh))
@@ -268,44 +268,44 @@ Mesh UtilLib::CreateCube(const Point_3& minPoint, const Point_3& maxPoint)
 Vector_3 compute_orthogonal_vector(const Vector_3& normal)
 {
 	if (normal.x() != 0 || normal.y() != 0) {
-		// ·¨ÏòÁ¿²»Æ½ĞĞÓÚ z ÖáÊ±£¬·µ»Ø (0, c, -b)
+		// æ³•å‘é‡ä¸å¹³è¡Œäº z è½´æ—¶ï¼Œè¿”å› (0, c, -b)
 		return Kernel::Vector_3(0, normal.z(), -normal.y());
 	}
 	else {
-		// ·¨ÏòÁ¿Æ½ĞĞÓÚ z ÖáÊ±£¬·µ»Ø (1, 0, 0)
+		// æ³•å‘é‡å¹³è¡Œäº z è½´æ—¶ï¼Œè¿”å› (1, 0, 0)
 		return Kernel::Vector_3(1, 0, 0);
 	}
 }
 
 void UtilLib::CreatePlaneMesh(const Plane_3& plane, const Point_3& centerPoint, Mesh& mesh, double size)
 {
-	// ·¨ÏòÁ¿
+	// æ³•å‘é‡
 	Kernel::Vector_3 normal(plane.a(), plane.b(), plane.c());
 
-	// È·¶¨Æ½ÃæÉÏµÄÖĞĞÄµã
+	// ç¡®å®šå¹³é¢ä¸Šçš„ä¸­å¿ƒç‚¹
 	Point_3 center = plane.projection(centerPoint);
 
-	// ´´½¨Á½¸öÈÎÒâÕı½»ÏòÁ¿ (u, v) À´¶¨ÒåÆ½Ãæ
+	// åˆ›å»ºä¸¤ä¸ªä»»æ„æ­£äº¤å‘é‡ (u, v) æ¥å®šä¹‰å¹³é¢
 	Kernel::Vector_3 u = compute_orthogonal_vector(normal);
 	Kernel::Vector_3 v = CGAL::cross_product(normal, u);
 
-	// ¹éÒ»»¯²¢·Å´óµ½Ö¸¶¨´óĞ¡
+	// å½’ä¸€åŒ–å¹¶æ”¾å¤§åˆ°æŒ‡å®šå¤§å°
 	u = size * u / std::sqrt(u.squared_length());
 	v = size * v / std::sqrt(v.squared_length());
 
-	// Æ½ÃæµÄËÄ¸ö¶¥µã
+	// å¹³é¢çš„å››ä¸ªé¡¶ç‚¹
 	Point_3 p1 = center + u + v;
 	Point_3 p2 = center + u - v;
 	Point_3 p3 = center - u - v;
 	Point_3 p4 = center - u + v;
 
-	// Ìí¼Ó¶¥µãµ½Íø¸ñ
+	// æ·»åŠ é¡¶ç‚¹åˆ°ç½‘æ ¼
 	auto v1 = mesh.add_vertex(p1);
 	auto v2 = mesh.add_vertex(p2);
 	auto v3 = mesh.add_vertex(p3);
 	auto v4 = mesh.add_vertex(p4);
 
-	// Ìí¼ÓÁ½×éÈı½ÇĞÎĞÎ³É¾ØĞÎ
+	// æ·»åŠ ä¸¤ç»„ä¸‰è§’å½¢å½¢æˆçŸ©å½¢
 	mesh.add_face(v1, v2, v3);
 	mesh.add_face(v1, v3, v4);
 }
@@ -329,11 +329,11 @@ Point_3 UtilLib::GetMeshCenterPoint(const Mesh& mesh)
 
 void UtilLib::CentralizeMesh(Mesh& mesh)
 {
-	// 1. ³õÊ¼»¯±ß½ç
+	// 1. åˆå§‹åŒ–è¾¹ç•Œ
 	Point_3 boxMin(DBL_MAX, DBL_MAX, DBL_MAX);
 	Point_3 boxMax(-DBL_MAX, -DBL_MAX, -DBL_MAX);
 
-	// 2. ±éÀúËùÓĞ¶¥µã£¬¼ÆËã°üÎ§ºĞ
+	// 2. éå†æ‰€æœ‰é¡¶ç‚¹ï¼Œè®¡ç®—åŒ…å›´ç›’
 	for (const auto& p : mesh.points()) 
 	{
 		boxMin = Point_3(std::min(boxMin.x(), p.x()),
@@ -344,12 +344,12 @@ void UtilLib::CentralizeMesh(Mesh& mesh)
 			std::max(boxMax.z(), p.z()));
 	}
 
-	// 3. ¼ÆËãÖĞĞÄµã
+	// 3. è®¡ç®—ä¸­å¿ƒç‚¹
 	Point_3 center((boxMin.x() + boxMax.x()) / 2.0,
 		(boxMin.y() + boxMax.y()) / 2.0,
 		(boxMin.z() + boxMax.z()) / 2.0);
 
-	// 4. Æ½ÒÆËùÓĞ¶¥µã
+	// 4. å¹³ç§»æ‰€æœ‰é¡¶ç‚¹
 	for (const auto& v : mesh.vertices()) 
 	{
 		Point_3 p = mesh.point(v);
@@ -357,48 +357,243 @@ void UtilLib::CentralizeMesh(Mesh& mesh)
 	}
 }
 
-std::map<int, std::vector<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mesh)
+std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mesh, double thresholdAngle)
 {
-	auto fNormalMap = mesh.add_property_map<face_descriptor, Vector_3>("f:normal", CGAL::NULL_VECTOR).first;
-	auto fChartMap = mesh.add_property_map<face_descriptor, int>("f:chart", -1).first;
-	auto fColorMap = mesh.add_property_map<face_descriptor, CGAL::Color>("f:color", CGAL::Color(0, 0, 0)).first;
-	std::map<int, std::vector<face_descriptor>> partitions;
-	CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
-	int currenType = 0;
+	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
+	if (!fNormalMap)
+	{
+		fNormalMap = mesh.add_property_map<face_descriptor, Vector_3>("f:normal", CGAL::NULL_VECTOR).first;
+		CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
+	}
+	auto fChartMap = mesh.property_map<face_descriptor, size_t>("f:chart").first;
+	if (!fChartMap)
+	{
+		fChartMap = mesh.add_property_map<face_descriptor, size_t>("f:chart", size_t(-1)).first;
+	}
+	auto fColorMap = mesh.property_map<face_descriptor, CGAL::Color>("f:color").first;
+	if (!fColorMap)
+	{
+		fColorMap = mesh.add_property_map<face_descriptor, CGAL::Color>("f:color", CGAL::Color(0, 0, 0)).first;
+	}
+
+	std::map<size_t, std::set<face_descriptor>> partitionsMap;
+	std::map<size_t, Vector_3> partitionsNormal;
+	size_t currenId = 0;
 	CGAL::Color currentColor = GenerateRandomColor();
+	const double cosThreshold = std::cos(thresholdAngle * DEG_TO_RAD);
+
 	for (const auto& seed : mesh.faces())
 	{
-		if (fChartMap[seed] != -1)
-		{
+		if (fChartMap[seed] != size_t(-1))
 			continue;
-		}
+
 		std::queue<face_descriptor> facesQueue;
-		fChartMap[seed] = currenType;
+		fChartMap[seed] = currenId;
 		fColorMap[seed] = currentColor;
-		partitions[currenType] = std::vector<face_descriptor>();
-		partitions[currenType].push_back(seed);
+		partitionsMap[currenId] = std::set<face_descriptor>();
+		partitionsMap[currenId].insert(seed);
 		facesQueue.push(seed);
+		Vector_3 avgNormal = fNormalMap[seed];
+
 		while (!facesQueue.empty())
 		{
 			face_descriptor face = facesQueue.front();
 			facesQueue.pop();
+
 			for (const auto& neighborFace : mesh.faces_around_face(mesh.halfedge(face)))
 			{
-				if (fChartMap[neighborFace] != -1)
+				if (fChartMap[neighborFace] != size_t(-1))
 				{
 					continue;
 				}
-				if (fNormalMap[face] * fNormalMap[neighborFace] > std::cos(5 * DEG_TO_RAD))
+				Vector_3 neighborNormal = fNormalMap[neighborFace];
+				double dot = (avgNormal * neighborNormal);
+				double lenProduct = std::sqrt(avgNormal.squared_length() * neighborNormal.squared_length());
+				if (lenProduct == 0) continue;
+
+				double cosAngle = dot / lenProduct;
+				if (cosAngle > cosThreshold)
 				{
-					fChartMap[neighborFace] = currenType;
+					fChartMap[neighborFace] = currenId;
 					fColorMap[neighborFace] = currentColor;
-					partitions[currenType].push_back(neighborFace);
+					partitionsMap[currenId].insert(neighborFace);
 					facesQueue.push(neighborFace);
+					avgNormal = avgNormal + neighborNormal;
 				}
 			}
 		}
-		currenType++;
+		partitionsNormal[currenId] = avgNormal / std::sqrt(avgNormal.squared_length());
+		currenId++;
 		currentColor = GenerateRandomColor();
 	}
-	return partitions;
+	CGAL::IO::write_PLY("OriginalClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+
+	std::vector<size_t> smallPartitions;
+	std::vector<size_t> partitions;
+	std::map<size_t, double> partitionsArea;
+	std::map<size_t, double> partitionsPerimeter;
+	double totalArea = 0;
+	for (auto& pair : partitionsMap)
+	{
+		size_t partitionId = pair.first;
+		auto& partition = pair.second;
+		std::set<halfedge_descriptor> boundaries;
+		double perimeter = 0.0;
+		double area = 0.0;
+		for (auto face : partition)
+		{
+			area += CGAL::Polygon_mesh_processing::face_area(face, mesh);
+			for (auto halfedge : CGAL::halfedges_around_face(mesh.halfedge(face), mesh))
+			{
+				halfedge_descriptor oppositeHalfedge = mesh.opposite(halfedge);
+				face_descriptor face = mesh.face(oppositeHalfedge);
+				if (mesh.is_valid(face))
+				{
+					size_t neighborId = fChartMap[face];
+					if (partitionId != neighborId)
+					{
+						boundaries.insert(halfedge);
+						break;
+					}
+				}
+				else
+				{
+					boundaries.insert(halfedge);
+					break;
+				}
+			}
+		}
+		for (auto halfedge : boundaries)
+		{
+			perimeter += UtilLib::EdgeLength(halfedge, mesh);
+		}
+		partitions.push_back(partitionId);
+		partitionsArea[partitionId] = area;
+		partitionsPerimeter[partitionId] = perimeter;
+		totalArea += area;
+	}
+	
+	std::sort(partitions.begin(), partitions.end(), [&](const int& indexA, const int& indexB) {return partitionsArea.at(indexA) > partitionsArea.at(indexB); });
+	double thresholdPercent = 0.95;
+	double thresholdArea = 0.001 * totalArea;
+	double sumArea = 0;
+	for (size_t i = 0; i < partitions.size(); i++)
+	{
+		size_t partitionId = partitions[i];
+		double area = partitionsArea[partitionId];
+		double perimeter = partitionsPerimeter[partitionId];
+		if (sumArea / totalArea > thresholdPercent)
+		{
+			if (perimeter * perimeter / area > 45 || area < thresholdArea)
+			{
+				smallPartitions.push_back(partitionId);
+			}
+		}
+		sumArea += area;
+	}
+
+	for (size_t partitionId : smallPartitions)
+	{
+		// neighbor partition ID -> appear count
+		std::map<size_t, size_t> neighborCountMap;
+		for (const auto& face : partitionsMap.at(partitionId))
+		{
+			for (const auto& neighbor : CGAL::faces_around_face(mesh.halfedge(face), mesh))
+			{
+				size_t neighborId = fChartMap[neighbor];
+				if (neighborId == partitionId)
+				{
+					continue;
+				}
+				neighborCountMap[neighborId]++;
+			}
+		}
+		size_t maxCountId = size_t(-1);
+		size_t maxCount = 0;
+		for (auto& pair : neighborCountMap)
+		{
+			size_t neighborId = pair.first;
+			size_t count = pair.second;
+			if (count > maxCount)
+			{
+				maxCountId = neighborId;
+				maxCount = count;
+			}
+		}
+		if (maxCountId != size_t(-1))
+		{
+			CGAL::Color newColor = fColorMap[*partitionsMap[maxCountId].begin()];
+			for (auto& face : partitionsMap.at(partitionId))
+			{
+				partitionsMap[maxCountId].insert(face);
+				fChartMap[face] = maxCountId;
+				fColorMap[face] = newColor;
+			}
+			partitionsMap.erase(partitionId);
+			partitionsNormal.erase(partitionId);
+		}
+	}
+	return partitionsMap;
+}
+
+void UtilLib::BuildLocalBasis(const Vector_3& normal, Vector_3& u, Vector_3& v)
+{
+	Vector_3 temp;
+	if (std::abs(normal.x()) <= std::abs(normal.y()) && std::abs(normal.x()) <= std::abs(normal.z()))
+		temp = Vector_3(1, 0, 0);
+	else if (std::abs(normal.y()) <= std::abs(normal.x()) && std::abs(normal.y()) <= std::abs(normal.z()))
+		temp = Vector_3(0, 1, 0);
+	else
+		temp = Vector_3(0, 0, 1);
+
+	u = CGAL::cross_product(temp, normal);
+	u = u / std::sqrt(u.squared_length());
+	v = CGAL::cross_product(normal, u);
+	v = v / std::sqrt(v.squared_length());
+}
+
+void UtilLib::WriteWireframeOBJ(std::string outputFileName, const Mesh& mesh)
+{
+	std::ofstream os(outputFileName);
+	size_t verticesCount = mesh.number_of_vertices();
+	size_t edgesCount = mesh.number_of_edges();
+
+	os << "# file written from a CGAL tool in Wavefront obj format" << std::endl;
+	os << "# This is a wireframe model" << std::endl;
+	os << "# " << verticesCount << " vertices" << std::endl;
+	os << "# " << edgesCount << " lines" << std::endl;
+	os << std::endl;
+	os << std::endl;
+
+	os << "# " << verticesCount << " vertices" << std::endl;
+	os << "# ------------------------------------------" << std::endl;
+	os << std::endl;
+	for (vertex_descriptor vertex : mesh.vertices())
+	{
+		Point_3 point = mesh.point(vertex);
+		os << "v " << point.x() << " " << point.y() << " " << point.z() << std::endl;
+	}
+	os << std::endl;
+	os << "# " << edgesCount << " lines" << std::endl;
+	os << "# ------------------------------------------" << std::endl;
+	for (edge_descriptor edge : mesh.edges())
+	{
+		vertex_descriptor v1 = mesh.vertex(edge, 1);
+		vertex_descriptor v2 = mesh.vertex(edge, 0);
+		os << "l " << v1.idx() + 1 << " " << v2.idx() + 1 << " " << std::endl;
+	}
+	os << std::endl;
+	os << "# End of Wavefront obj format #" << std::endl;
+}
+
+
+double UtilLib::EdgeLength(halfedge_descriptor h, const Mesh& mesh)
+{
+	vertex_descriptor v1 = mesh.source(h);
+	vertex_descriptor v2 = mesh.target(h);
+
+	const Point_3& p1 = mesh.point(v1);
+	const Point_3& p2 = mesh.point(v2);
+
+	return std::sqrt(CGAL::squared_distance(p1, p2));
 }

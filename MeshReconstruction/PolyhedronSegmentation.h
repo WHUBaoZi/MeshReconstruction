@@ -28,6 +28,8 @@ public:
 	Mesh* mesh = nullptr;
 	
 	Mesh cubeMesh;
+
+	Point_3 cubeCenter;
 	
 	PartitionManager* partitionManager = nullptr;
 

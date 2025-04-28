@@ -1,6 +1,5 @@
 #include "PolyhedronSegmentation.h"
 
-
 Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<PartitionSet*> parentPartitions): polyhedronMesh(polyhedronMesh)
 {
 	centroidPoint = CGAL::Polygon_mesh_processing::centroid(polyhedronMesh);
@@ -69,7 +68,7 @@ PolyhedronSegmentation::PolyhedronSegmentation(PartitionManager* partitionManage
 
 Mesh PolyhedronSegmentation::Run(std::string outputPath)
 {
-	Point_3 centerPoint = UtilLib::GetMeshCenterPoint(cubeMesh);
+	cubeCenter = UtilLib::GetMeshCenterPoint(cubeMesh);
 	{
 		std::vector<PartitionSet*> partitions;
 		std::vector<PartitionSet*> allPartitions;
@@ -111,52 +110,9 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 		CGAL::Polygon_mesh_processing::clip(belowMesh, clipPlane, CGAL::parameters::clip_volume(true));
 		CGAL::Polygon_mesh_processing::clip(aboveMesh, UtilLib::ReversePlane(clipPlane), CGAL::parameters::clip_volume(true));
 
-		//Mesh remeshedBelowMesh, remeshedAboveMesh;
-		//CGAL::Polygon_mesh_processing::remesh_planar_patches(belowMesh, remeshedBelowMesh);
-		//CGAL::Polygon_mesh_processing::remesh_planar_patches(aboveMesh, remeshedAboveMesh);
-		//belowMesh = remeshedBelowMesh;
-		//aboveMesh = remeshedAboveMesh;
-
 		CGAL::Surface_mesh_simplification::Edge_length_stop_predicate<double> stop(0.5);
 		CGAL::Surface_mesh_simplification::edge_collapse(belowMesh, stop);
 		CGAL::Surface_mesh_simplification::edge_collapse(aboveMesh, stop);
-
-		//if (CGAL::Polygon_mesh_processing::does_self_intersect(belowMesh) || 
-		//	CGAL::Polygon_mesh_processing::does_self_intersect(aboveMesh))	// ≤˙…˙◊‘œ‡Ωª£¨ªÿπˆ«–∏Ó
-		//{
-		//	bool cut_successful = false;
-		//	const int max_attempts = 20; // ◊Ó¥Û≥¢ ‘¥Œ ˝
-		//	double adjustment_step = 0.01; // √ø¥Œµ˜’˚µƒ≤Ω≥§
-		//	double random_tilt = (rand() % 100 - 50) * 0.0001;
-		//	clipPlane = Kernel::Plane_3(
-		//		clipPlane.a() + random_tilt,
-		//		clipPlane.b() + random_tilt,
-		//		clipPlane.c(),
-		//		clipPlane.d() + adjustment_step);
-		//	for (int attempt = 0; attempt < max_attempts; ++attempt) 
-		//	{
-		//		belowMesh = polyhedron->polyhedronMesh;
-		//		aboveMesh = polyhedron->polyhedronMesh;
-		//		// ≥¢ ‘«–∏Ó
-		//		CGAL::Polygon_mesh_processing::clip(belowMesh, clipPlane, CGAL::parameters::clip_volume(true));
-		//		CGAL::Polygon_mesh_processing::clip(aboveMesh, UtilLib::ReversePlane(clipPlane), CGAL::parameters::clip_volume(true));
-		//		// ºÏ≤‚◊‘œ‡Ωª
-		//		if (!CGAL::Polygon_mesh_processing::does_self_intersect(belowMesh) &&
-		//			!CGAL::Polygon_mesh_processing::does_self_intersect(aboveMesh)) 
-		//		{
-		//			cut_successful = true;
-		//			break;
-		//		}
-		//		// »Áπ˚◊‘œ‡Ωª£¨ªÿπˆ≤¢µ˜’˚∆Ω√Ê
-		//		clipPlane = Kernel::Plane_3(
-		//			clipPlane.a() + random_tilt,
-		//			clipPlane.b() + random_tilt,
-		//			clipPlane.c(),
-		//			clipPlane.d() + adjustment_step);
-		//	}
-		//}
-		//CGAL::Polygon_mesh_processing::stitch_borders(belowMesh);
-		//CGAL::Polygon_mesh_processing::stitch_borders(aboveMesh);
 
 		std::vector<PartitionSet*> parentPartitions = polyhedron->partitions;
 		parentPartitions.erase(parentPartitions.begin() + clipPlaneIndex);
@@ -200,7 +156,8 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 	for (int i = 0; i < indivisiblePolyhedrons.size(); i++)
 	{
 		Point_3 centroid = CGAL::Polygon_mesh_processing::centroid(indivisiblePolyhedrons[i]->polyhedronMesh);
-		Ray questRay(centroid, Point_3(centroid.x() + 1, centroid.y(), centroid.z()));
+		// Ray questRay(centroid, Point_3(centroid.x() + 1, centroid.y(), centroid.z()));
+		Ray questRay(centroid, cubeCenter);
 		std::size_t intersections = tree.number_of_intersected_primitives(questRay);
 		if (intersections % 2 == 0)
 		{
@@ -220,7 +177,7 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 		int polyhedronsIndex = usefulPolyhedrons[i];
 		Mesh& polyhedronMesh = indivisiblePolyhedrons[polyhedronsIndex]->polyhedronMesh;
 		std::unordered_map<vertex_descriptor, vertex_descriptor> localVertexMap;
-		// ∏¥÷∆∂•µ„
+		// Â§çÂà∂È°∂ÁÇπ
 		for (vertex_descriptor v : polyhedronMesh.vertices())
 		{
 			Point_3 p = polyhedronMesh.point(v);
@@ -228,7 +185,7 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 			localVertexMap[v] = newV;
 		}
 
-		// ∏¥÷∆√Ê
+		// Â§çÂà∂Èù¢
 		for (face_descriptor f : polyhedronMesh.faces())
 		{
 			std::vector<vertex_descriptor> newFace;
@@ -244,29 +201,35 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 
 #pragma region Merge polyhedrons
 	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.1);
+	int flags = openvdb::tools::DISABLE_RENORMALIZATION;
 	CGALMeshAdapter adapter(&mergedMesh, transform);
 	openvdb::util::NullInterrupter interrupter;
 	GridType::Ptr sdfGrid = openvdb::tools::meshToVolume<GridType>(
 		interrupter,
-		adapter,                  // CGALMeshAdapter
-		*transform,               // ¥´µ› Transform£®Ω‚“˝”√ shared_ptr£©
-		1.0f,                     // exteriorBandWidth£∫Õ‚≤ø’≠¥¯øÌ∂»£®µ•Œª£∫ÃÂÀÿ£©
-		std::numeric_limits<float>::max() // interiorBandWidth£∫◊Ó¥Û÷µ£¨ÃÓ≥‰ƒ⁄≤ø
+		adapter,
+		*transform,
+		1.0f,
+		std::numeric_limits<float>::max()
 	);
 	std::vector<openvdb::Vec3s> points;
 	std::vector<openvdb::Vec3I> triangles;
 	std::vector<openvdb::Vec4I> quads;
 	openvdb::tools::volumeToMesh(*sdfGrid, points, triangles, quads);
-	std::ofstream objFile("output.obj");
-	for (const auto& p : points) {
-		objFile << "v " << p[0] << " " << p[1] << " " << p[2] << "\n";
+	Mesh voxelMesh, remeshedMesh;
+	std::vector<vertex_descriptor> vertices;
+	for (const auto& p : points)
+	{
+		vertices.push_back(voxelMesh.add_vertex(Point_3(p[0], p[1], p[2])));
 	}
-	for (const auto& quad : quads) {
-		objFile << "f " << quad[0] + 1 << " " << quad[1] + 1 << " " << quad[2] + 1 << " "<< quad[3] + 1 << "\n";
+	for (const auto& quad : quads)
+	{
+		voxelMesh.add_face(vertices[quad[3]], vertices[quad[2]], vertices[quad[1]], vertices[quad[0]]);
 	}
-	objFile.close();
+	CGAL::IO::write_OBJ(outputPath + "VoxelMesh.obj", voxelMesh);
+	CGAL::Polygon_mesh_processing::triangulate_faces(voxelMesh);
+	CGAL::IO::write_OBJ(outputPath + "VoxelMesh_Triangulate.obj", voxelMesh);
 #pragma endregion
 
 
-    return Mesh();
+    return voxelMesh;
 }

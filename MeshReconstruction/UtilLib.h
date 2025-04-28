@@ -38,7 +38,7 @@ namespace UtilLib
 
 	CGAL::Color GenerateRandomColor();
 
-	std::set<int> GetPartitionNeighbors(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
+	std::set<size_t> GetPartitionNeighbors(size_t partitionId, const std::map<size_t, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
 
 	Vector_3 GetPartitionAverageNormal(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
 
@@ -50,7 +50,13 @@ namespace UtilLib
 
 	void CentralizeMesh(Mesh& mesh);
 
-	std::map<int, std::vector<face_descriptor>> PartitionByNormal(Mesh& mesh);
+	std::map<size_t, std::set<face_descriptor>> PartitionByNormal(Mesh& mesh, double thresholdAngle = 15);
+
+	void BuildLocalBasis(const Vector_3& normal, Vector_3& u, Vector_3& v);
+
+	void WriteWireframeOBJ(std::string outputFileName, const Mesh& mesh);
+
+	double EdgeLength(halfedge_descriptor h, const Mesh& mesh);
 
 	inline Plane_3 ReversePlane(const Plane_3& plane) { return Plane_3(-plane.a(), -plane.b(), -plane.c(), -plane.d()); }
 

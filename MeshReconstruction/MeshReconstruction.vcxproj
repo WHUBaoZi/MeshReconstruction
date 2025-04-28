@@ -148,6 +148,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Partition.cpp" />
     <ClCompile Include="PolyhedronSegmentation.cpp" />
+    <ClCompile Include="Remesh.cpp" />
     <ClCompile Include="test.cpp" />
     <ClCompile Include="UtilLib.cpp" />
     <ClCompile Include="Voxel.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="CGALTypes.h" />
     <ClInclude Include="Partition.h" />
     <ClInclude Include="PolyhedronSegmentation.h" />
+    <ClInclude Include="Remesh.h" />
     <ClInclude Include="UtilLib.h" />
     <ClInclude Include="Voxel.h" />
   </ItemGroup>

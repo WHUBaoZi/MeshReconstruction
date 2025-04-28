@@ -69,7 +69,7 @@ public:
 	std::map<int, PartitionSet> partitionSetMap;
 
 public:
-	void PartitionSegmentation();
+	void RunSegmentation();
 
 	int GetFreeIndex();
 };

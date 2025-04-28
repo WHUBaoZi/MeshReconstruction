@@ -3,9 +3,12 @@
 
 #include <openvdb/openvdb.h>
 #include <openvdb/math/Transform.h>
-#include <openvdb/tools/MeshToVolume.h>
 #include <openvdb/io/File.h>
+#include <openvdb/tools/MeshToVolume.h>
+#include <openvdb/tools/GridOperators.h>
+#include <openvdb/tools/LevelSetFilter.h>
 #include <openvdb/tools/VolumeToMesh.h>
+#include <openvdb/tools/FastSweeping.h>
 
 using GridType = openvdb::FloatGrid;
 
@@ -32,7 +35,7 @@ private:
     const openvdb::math::Transform::Ptr transform;
 };
 
-class Voxel
+namespace Voxel
 {
-
-};
+    openvdb::FloatGrid::Ptr sharpen_vdb(openvdb::FloatGrid::Ptr sdfGrid);
+}

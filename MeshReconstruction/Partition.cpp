@@ -153,7 +153,7 @@ PartitionManager::PartitionManager(Mesh* mesh): mesh(mesh)
 {
 }
 
-void PartitionManager::PartitionSegmentation()
+void PartitionManager::RunSegmentation()
 {
 	int kRing = 3;
 	double dist = 0.3;
@@ -197,7 +197,7 @@ void PartitionManager::PartitionSegmentation()
 	{
 		faces.push_back(face);
 	}
-	// Æ½Ãæ¶È½µÐò
+	// å¹³é¢åº¦é™åº
 	std::sort(faces.begin(), faces.end(), [&](const face_descriptor& a, const face_descriptor& b) {return fPlanarityMap[a] > fPlanarityMap[b]; });
 	std::queue<face_descriptor> facesQueue;
 	for (const auto& face : faces)

@@ -29,3 +29,16 @@ void CGALMeshAdapter::getIndexSpacePoint(size_t n, size_t v, openvdb::Vec3d& pos
     // 转换到 OpenVDB 索引空间
     pos = transform->worldToIndex(openvdb::Vec3d(p.x(), p.y(), p.z()));
 }
+
+openvdb::FloatGrid::Ptr Voxel::sharpen_vdb(openvdb::FloatGrid::Ptr sdfGrid)
+{
+    // 计算梯度场
+    openvdb::tools::Gradient<openvdb::FloatGrid> gradient(*sdfGrid);
+    auto gradGrid = gradient.process();  // 计算梯度
+
+    // 通过梯度来锐化
+    openvdb::tools::LevelSetFilter<GridType> filter(*sdfGrid);
+    filter.meanCurvature();
+
+    return sdfGrid;  // 返回修改后的网格
+}
