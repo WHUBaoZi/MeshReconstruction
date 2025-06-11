@@ -24,6 +24,7 @@ public:
 	Point_3 centerPoint = Point_3(0.0, 0.0, 0.0);
 	double area = 0.0;
 	PartitionSet* partitionSet = nullptr;
+	bool bIsValid = true;
 
 public:
 	void CalculateAverageNormal();
@@ -45,7 +46,7 @@ public:
 	Vector_3 averageNormal = Vector_3(0.0, 0.0, 0.0);
 	Point_3 averageCenterPoint = Point_3(0.0, 0.0, 0.0);
 	double totalArea = 0.0;
-	bool bIsValid = false;
+	bool bIsValid = true;
 
 public:
 	void InsertPartition(Partition* partition);
@@ -65,7 +66,7 @@ public:
 public:
 	Mesh* mesh = nullptr;
 	std::map<int, std::set<face_descriptor>> partitionFacesMap;
-	std::map<int, Partition> partitionMap;
+	std::map<int, std::shared_ptr<Partition>> partitionMap;
 	std::map<int, PartitionSet> partitionSetMap;
 
 public:

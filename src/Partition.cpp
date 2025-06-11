@@ -262,7 +262,7 @@ void PartitionManager::RunSegmentation()
 #pragma endregion
 	for (const auto& pair : partitionFacesMap)
 	{
-		partitionMap.insert(std::make_pair(pair.first, Partition(pair.first, this, mesh)));
+		partitionMap[pair.first] = std::shared_ptr<Partition>(new Partition(pair.first, this, mesh));
 	}
 }
 
