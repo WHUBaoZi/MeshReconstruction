@@ -12,17 +12,17 @@ Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<PartitionSet*> parentPar
 			std::size_t intersections = polyhedronTree.number_of_intersected_primitives(questRay);
 			if (intersections % 2 != 0)
 			{
-				partitions.emplace_back(partitionSet);
+				partitionSets.emplace_back(partitionSet);
 				break;
 			}
 		}
 	}
-	planeIntersectionNums.assign(partitions.size(), 0);
-	for (int i = 0; i < partitions.size(); i++)
+	planeIntersectionNums.assign(partitionSets.size(), 0);
+	for (int i = 0; i < partitionSets.size(); i++)
 	{
-		for (int j = i + 1; j < partitions.size(); j++)
+		for (int j = i + 1; j < partitionSets.size(); j++)
 		{
-			CGAL::Object result = CGAL::intersection(partitions[i]->clipPlane, partitions[j]->clipPlane);
+			CGAL::Object result = CGAL::intersection(partitionSets[i]->clipPlane, partitionSets[j]->clipPlane);
 			const Line_3* intersectionLine = CGAL::object_cast<Line_3>(&result);
 			if (intersectionLine)
 			{
@@ -43,7 +43,7 @@ Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<PartitionSet*> parentPar
 Mesh Polyhedron::DrawPlanesMesh()
 {
 	Mesh mesh;
-	for (const auto& partition : partitions)
+	for (const auto& partition : partitionSets)
 	{
 		UtilLib::CreatePlaneMesh(partition->clipPlane, partition->averageCenterPoint, mesh);
 	}
@@ -99,7 +99,7 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 		std::cout << "Clipping Num is " << loopNum << std::endl;
 		std::shared_ptr<Polyhedron> polyhedron = polyhedrons.front();
 		int clipPlaneIndex = polyhedron->GetMinIntersectionIndex();
-		Plane_3 clipPlane = polyhedron->partitions[clipPlaneIndex]->clipPlane;
+		Plane_3 clipPlane = polyhedron->partitionSets[clipPlaneIndex]->clipPlane;
 		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Polyhedron.obj", polyhedron->polyhedronMesh);
 		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_PolyhedronPlanes.obj", polyhedron->DrawPlanesMesh());
 
@@ -114,7 +114,7 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 		CGAL::Surface_mesh_simplification::edge_collapse(belowMesh, stop);
 		CGAL::Surface_mesh_simplification::edge_collapse(aboveMesh, stop);
 
-		std::vector<PartitionSet*> parentPartitions = polyhedron->partitions;
+		std::vector<PartitionSet*> parentPartitions = polyhedron->partitionSets;
 		parentPartitions.erase(parentPartitions.begin() + clipPlaneIndex);
 
 		std::map<Mesh::Face_index, std::size_t> face_component_map;
@@ -123,7 +123,7 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 		{
 			CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Below.obj", belowMesh);
 			auto belowPolyhedron = std::make_shared<Polyhedron>(belowMesh, parentPartitions);
-			if (!belowPolyhedron->partitions.empty())
+			if (!belowPolyhedron->partitionSets.empty())
 			{
 				polyhedrons.push(belowPolyhedron);
 			}
@@ -136,7 +136,7 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 		{
 			CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Above.obj", aboveMesh);
 			auto abovePolyhedron = std::make_shared<Polyhedron>(aboveMesh, parentPartitions);
-			if (!abovePolyhedron->partitions.empty())
+			if (!abovePolyhedron->partitionSets.empty())
 			{
 				polyhedrons.push(abovePolyhedron);
 			}

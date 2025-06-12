@@ -27,4 +27,4 @@ target_include_directories(MeshReconstruction PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 
 target_link_directories(MeshReconstruction PRIVATE ${BOOST_LIBRARYDIR} ${GMP_DIR}/lib)
 
-target_link_libraries(MeshReconstruction PRIVATE OpenVDB::openvdb libboost_filesystem-vc143-mt-gd-x64-1_86.lib libgmp-10.lib libmpfr-4.lib)
+target_link_libraries(MeshReconstruction PRIVATE OpenVDB::openvdb libboost_filesystem-vc143-mt-x64-1_86.lib libgmp-10.lib libmpfr-4.lib)

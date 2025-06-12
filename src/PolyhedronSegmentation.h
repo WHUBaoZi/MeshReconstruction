@@ -11,7 +11,8 @@ public:
 	Mesh polyhedronMesh;
 	Point_3 centroidPoint;
 	Tree polyhedronTree;
-	std::vector<PartitionSet*> partitions;
+	std::vector<std::shared_ptr<Partition>> partitions;
+	std::vector<PartitionSet*> partitionSets;
 	std::vector<int> planeIntersectionNums;
 
 public:

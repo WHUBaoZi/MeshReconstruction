@@ -14,15 +14,13 @@ int main(int argc, char* argv[])
 	std::vector<std::pair<std::string, long long>> timings;
 
 #pragma region Input mesh file & Centralize Mesh
-	int maxPartitionsNum = 20;
-	std::string inputFile = "../Data/chosenTestData/test6.obj";
+	std::string inputFile = "../Data/TestData/test4_HoleFill.obj";
 	std::string outputPath = "../Data/Output/";
 	std::string fileName = "";
 	if (argc > 1)
 	{
-		maxPartitionsNum = std::stoi(argv[1]);
-		inputFile = argv[2];
-		outputPath = argv[3];
+		inputFile = argv[1];
+		outputPath = argv[2];
 	}
 	{
 		size_t lastSlashPos = inputFile.find_last_of("/\\");
@@ -77,12 +75,17 @@ int main(int argc, char* argv[])
 	}
 	float toleranceArea = totalArea * areaTolerancePercent;
 	std::sort(partitionIndices.begin(), partitionIndices.end(), [&](int a, int b) {return partitionManager.partitionMap[a]->area > partitionManager.partitionMap[b]->area; });
+	int num = 0;
 	for (size_t i = 0; i < partitionIndices.size(); i++)
 	{
 		auto& partition = partitionManager.partitionMap[i];
 		if (partition->area < toleranceArea)
 		{
 			partition->bIsValid = false;
+		}
+		else
+		{
+			num++;
 		}
 	}
 #pragma endregion
