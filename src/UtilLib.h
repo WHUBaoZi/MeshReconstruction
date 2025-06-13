@@ -44,6 +44,8 @@ namespace UtilLib
 
 	Mesh CreateCube(const Point_3& minPoint, const Point_3& maxPoint);
 
+	Mesh CreatePlaneMesh(const Plane_3& plane, const Point_3& centerPoint, double size = 2.0);
+
 	void CreatePlaneMesh(const Plane_3& plane, const Point_3& centerPoint, Mesh& mesh, double size = 2.0);
 
 	Point_3 GetMeshCenterPoint(const Mesh& mesh);

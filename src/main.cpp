@@ -88,6 +88,10 @@ int main(int argc, char* argv[])
 			num++;
 		}
 	}
+	partitionManager.ReconstructPartitionMesh();
+	end = std::chrono::high_resolution_clock::now();
+	timings.emplace_back(std::make_pair("Partition optimize", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+	std::cout << "Partition optimize finished. Time taken: " << timings[0].second << " seconds" << std::endl;
 #pragma endregion
 
 

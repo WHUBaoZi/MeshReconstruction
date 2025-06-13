@@ -1,5 +1,26 @@
 #include "PolyhedronSegmentation.h"
 
+Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<std::shared_ptr<Partition>> parentPartitions): polyhedronMesh(polyhedronMesh)
+{
+	for (auto partition : parentPartitions)
+	{
+		CGAL::Side_of_triangle_mesh<Mesh, Kernel> insideTester(polyhedronMesh);
+		CGAL::Bounded_side boundResult = insideTester(partition->centerPoint);
+		if (boundResult == CGAL::ON_UNBOUNDED_SIDE)
+		{
+			if (CGAL::Polygon_mesh_processing::do_intersect(polyhedronMesh, partition->partitionMesh))
+			{
+				partitions.push_back(partition);
+			}
+		}
+		else
+		{
+			partitions.push_back(partition);
+		}
+	}
+}
+
+
 Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<PartitionSet*> parentPartitions): polyhedronMesh(polyhedronMesh)
 {
 	centroidPoint = CGAL::Polygon_mesh_processing::centroid(polyhedronMesh);
@@ -69,85 +90,71 @@ PolyhedronSegmentation::PolyhedronSegmentation(PartitionManager* partitionManage
 Mesh PolyhedronSegmentation::Run(std::string outputPath)
 {
 	cubeCenter = UtilLib::GetMeshCenterPoint(cubeMesh);
+	std::vector<std::shared_ptr<Partition>> initialPartitions;
+	boost::filesystem::create_directories(outputPath + "ClipPartitions");
+	Mesh originalPartitions;
+	for (auto& pair : partitionManager->partitionMap)
 	{
-		std::vector<PartitionSet*> partitions;
-		std::vector<PartitionSet*> allPartitions;
-		for (auto& pair : partitionManager->partitionSetMap)
+		auto& partition = pair.second;
+		if (partition->bIsValid)
 		{
-			if (pair.second.bIsValid)
-			{
-				partitions.push_back(&pair.second);
-			}
-			allPartitions.push_back(&pair.second);
+			initialPartitions.push_back(partition);
+			CGAL::IO::write_OBJ(outputPath + "ClipPartitions/ClipPartition_" + std::to_string(partition->partitionIndex) + ".obj", UtilLib::CreatePlaneMesh(partition->fitPlane, partition->centerPoint));
 		}
-		auto polyhedron = std::make_shared<Polyhedron>(cubeMesh, partitions);
-		polyhedrons.push(polyhedron);
-		boost::filesystem::create_directories(outputPath + "ClipPlanes");
-		CGAL::IO::write_OBJ(outputPath + "ClipPlanes/Original_PolyhedronPlanes.obj", Polyhedron(cubeMesh, allPartitions).DrawPlanesMesh());
-		for (const auto& partition : partitions)
-		{
-			Mesh partitionSetMesh;
-			UtilLib::CreatePlaneMesh(partition->clipPlane, partition->averageCenterPoint, partitionSetMesh);
-			CGAL::IO::write_OBJ(outputPath + "ClipPlanes/PartitionSet_" + std::to_string(partition->partitionSetIndex) + ".obj", partitionSetMesh);
-		}
+		UtilLib::CreatePlaneMesh(partition->fitPlane, partition->centerPoint, originalPartitions);
 	}
+	CGAL::IO::write_OBJ(outputPath + "ClipPartitions/OriginalClipPartitions.obj", originalPartitions);
 
+	polyhedrons.push(std::shared_ptr<Polyhedron>(new Polyhedron(cubeMesh, initialPartitions)));
 	int loopNum = 1;
 	std::cout << "Clipping..." << std::endl;
 	while (!polyhedrons.empty())
 	{
 		std::cout << "Clipping Num is " << loopNum << std::endl;
 		std::shared_ptr<Polyhedron> polyhedron = polyhedrons.front();
-		int clipPlaneIndex = polyhedron->GetMinIntersectionIndex();
-		Plane_3 clipPlane = polyhedron->partitionSets[clipPlaneIndex]->clipPlane;
+		polyhedrons.pop();
+		auto partition = polyhedron->partitions[0];
+		Plane_3 clipPlane = partition->fitPlane;
 		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Polyhedron.obj", polyhedron->polyhedronMesh);
-		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_PolyhedronPlanes.obj", polyhedron->DrawPlanesMesh());
+		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_ClipPartition_" + std::to_string(partition->partitionIndex) + ".obj", UtilLib::CreatePlaneMesh(partition->fitPlane, partition->centerPoint));
 
-		bool bSelfIntersection = CGAL::Polygon_mesh_processing::does_self_intersect(polyhedron->polyhedronMesh);
+		bool bSelfIntersection = CGAL::Polygon_mesh_processing::does_self_intersect(polyhedron->polyhedronMesh);	//For Test
 
 		Mesh belowMesh = polyhedron->polyhedronMesh;
 		Mesh aboveMesh = polyhedron->polyhedronMesh;
 		CGAL::Polygon_mesh_processing::clip(belowMesh, clipPlane, CGAL::parameters::clip_volume(true));
 		CGAL::Polygon_mesh_processing::clip(aboveMesh, UtilLib::ReversePlane(clipPlane), CGAL::parameters::clip_volume(true));
-
 		CGAL::Surface_mesh_simplification::Edge_length_stop_predicate<double> stop(0.5);
 		CGAL::Surface_mesh_simplification::edge_collapse(belowMesh, stop);
 		CGAL::Surface_mesh_simplification::edge_collapse(aboveMesh, stop);
 
-		std::vector<PartitionSet*> parentPartitions = polyhedron->partitionSets;
-		parentPartitions.erase(parentPartitions.begin() + clipPlaneIndex);
+		std::vector<std::shared_ptr<Partition>> parentPartitions = polyhedron->partitions;
+		parentPartitions.erase(parentPartitions.begin());
 
-		std::map<Mesh::Face_index, std::size_t> face_component_map;
-		boost::associative_property_map<std::map<Mesh::Face_index, std::size_t>> fcm(face_component_map);
-		if (CGAL::Polygon_mesh_processing::connected_components(belowMesh, fcm) == 1)
+		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Below.obj", belowMesh);
+		auto belowPolyhedron = std::shared_ptr<Polyhedron>(new Polyhedron(belowMesh, parentPartitions));
+		if (belowPolyhedron->partitions.empty())
 		{
-			CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Below.obj", belowMesh);
-			auto belowPolyhedron = std::make_shared<Polyhedron>(belowMesh, parentPartitions);
-			if (!belowPolyhedron->partitionSets.empty())
-			{
-				polyhedrons.push(belowPolyhedron);
-			}
-			else
-			{
-				indivisiblePolyhedrons.push_back(belowPolyhedron);
-			}
+			indivisiblePolyhedrons.push_back(belowPolyhedron);
 		}
-		if (CGAL::Polygon_mesh_processing::connected_components(aboveMesh, fcm) == 1)
+		else
 		{
-			CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Above.obj", aboveMesh);
-			auto abovePolyhedron = std::make_shared<Polyhedron>(aboveMesh, parentPartitions);
-			if (!abovePolyhedron->partitionSets.empty())
-			{
-				polyhedrons.push(abovePolyhedron);
-			}
-			else
-			{
-				indivisiblePolyhedrons.push_back(abovePolyhedron);
-			}
+			polyhedrons.push(belowPolyhedron);
 		}
-		polyhedrons.pop();
+		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Above.obj", aboveMesh);
+		auto abovePolyhedron = std::shared_ptr<Polyhedron>(new Polyhedron(aboveMesh, parentPartitions));
+		if (abovePolyhedron->partitions.empty())
+		{
+			indivisiblePolyhedrons.push_back(abovePolyhedron);
+		}
+		else
+		{
+			polyhedrons.push(abovePolyhedron);
+		}
 		loopNum++;
 	}
+
+
 
 	Tree tree(mesh->faces().begin(), mesh->faces().end(), *mesh);
 	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useless/");

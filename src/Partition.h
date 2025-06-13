@@ -25,6 +25,7 @@ public:
 	double area = 0.0;
 	PartitionSet* partitionSet = nullptr;
 	bool bIsValid = true;
+	Mesh partitionMesh;
 
 public:
 	void CalculateAverageNormal();
@@ -73,4 +74,6 @@ public:
 	void RunSegmentation();
 
 	int GetFreeIndex();
+
+	void ReconstructPartitionMesh();
 };

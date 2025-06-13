@@ -277,6 +277,13 @@ Vector_3 compute_orthogonal_vector(const Vector_3& normal)
 	}
 }
 
+Mesh UtilLib::CreatePlaneMesh(const Plane_3& plane, const Point_3& centerPoint, double size)
+{
+	Mesh mesh;
+	CreatePlaneMesh(plane, centerPoint, mesh, size);
+	return mesh;
+}
+
 void UtilLib::CreatePlaneMesh(const Plane_3& plane, const Point_3& centerPoint, Mesh& mesh, double size)
 {
 	// 法向量

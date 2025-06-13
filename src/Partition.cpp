@@ -275,3 +275,29 @@ int PartitionManager::GetFreeIndex()
 	}
 	return index;
 }
+
+void PartitionManager::ReconstructPartitionMesh()
+{
+	for (auto& pair : partitionMap)
+	{
+		auto& partition = pair.second;
+		if (partition->bIsValid)
+		{
+			std::map<vertex_descriptor, vertex_descriptor> v2v;
+			for (auto& face : partition->faces)
+			{
+				std::vector<vertex_descriptor> vertices;
+				vertices.reserve(3);
+				for (auto vertex : CGAL::vertices_around_face(mesh->halfedge(face), *mesh))
+				{
+					if (v2v.find(vertex) == v2v.end())
+					{
+						v2v[vertex] = partition->partitionMesh.add_vertex(mesh->point(vertex));
+					}
+					vertices.push_back(v2v[vertex]);
+				}
+				partition->partitionMesh.add_face(vertices[0], vertices[1], vertices[2]);
+			}
+		}
+	}
+}
