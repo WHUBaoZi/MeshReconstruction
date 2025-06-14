@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 #pragma region Optimize
 	std::cout << "Start partition optimize..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
-	float areaTolerancePercent = 0.005;
+	float areaTolerancePercent = 0.001;
 	double totalArea = 0.0;
 	std::vector<int> partitionIndices;
 	for (const auto& pair : partitionManager.partitionMap)
@@ -189,9 +189,6 @@ int main(int argc, char* argv[])
 	timings.emplace_back(std::make_pair("Polyhedron Segmentation", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
 	std::cout << "Polyhedron Segmentation finished. Time taken: " << timings[2].second << " seconds" << std::endl;
 #pragma endregion
-
-	
-	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh("D:\\DATA\\AcademicRelevance\\MeshReconstruction\\MeshReconstruction\\Data\\Output\\test4_HoleFix\\test4_Modify_Voxel.obj", voxelMesh);
 
 	RemeshManager remeshManager(&voxelMesh);
 	remeshManager.Run(outputPath + fileName + "/Remesh/");

@@ -16,6 +16,8 @@
 
 #define PI std::acos(-1)
 
+const std::string TEST_OUTPUT_PATH = "D:/DATA/AcademicRelevance/MeshReconstruction/MeshReconstruction/MeshReconstruction/Data/TestOutput/";
+
 namespace UtilLib
 {
 	const Vector_3 unitZ(0.0, 0.0, 1.0);
@@ -52,7 +54,7 @@ namespace UtilLib
 
 	void CentralizeMesh(Mesh& mesh);
 
-	std::map<size_t, std::set<face_descriptor>> PartitionByNormal(Mesh& mesh, double thresholdAngle = 15);
+	std::map<size_t, std::set<face_descriptor>> PartitionByNormal(Mesh& mesh, double threshold = 0.001, double thresholdAngle = 15);
 
 	void BuildLocalBasis(const Vector_3& normal, Vector_3& u, Vector_3& v);
 

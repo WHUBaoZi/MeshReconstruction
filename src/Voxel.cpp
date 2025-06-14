@@ -26,19 +26,48 @@ void CGALMeshAdapter::getIndexSpacePoint(size_t n, size_t v, openvdb::Vec3d& pos
 
     Point_3 p = mesh->point(mesh->target(*v_it));
 
-    // ×ª»»µ½ OpenVDB Ë÷Òı¿Õ¼ä
+    // è½¬æ¢åˆ° OpenVDB ç´¢å¼•ç©ºé—´
     pos = transform->worldToIndex(openvdb::Vec3d(p.x(), p.y(), p.z()));
 }
 
 openvdb::FloatGrid::Ptr Voxel::sharpen_vdb(openvdb::FloatGrid::Ptr sdfGrid)
 {
-    // ¼ÆËãÌİ¶È³¡
+    // è®¡ç®—æ¢¯åº¦åœº
     openvdb::tools::Gradient<openvdb::FloatGrid> gradient(*sdfGrid);
-    auto gradGrid = gradient.process();  // ¼ÆËãÌİ¶È
+    auto gradGrid = gradient.process();  // è®¡ç®—æ¢¯åº¦
 
-    // Í¨¹ıÌİ¶ÈÀ´Èñ»¯
-    openvdb::tools::LevelSetFilter<GridType> filter(*sdfGrid);
+    // é€šè¿‡æ¢¯åº¦æ¥é”åŒ–
+    openvdb::tools::LevelSetFilter<openvdb::FloatGrid> filter(*sdfGrid);
     filter.meanCurvature();
 
-    return sdfGrid;  // ·µ»ØĞŞ¸ÄºóµÄÍø¸ñ
+    return sdfGrid;  // è¿”å›ä¿®æ”¹åçš„ç½‘æ ¼
+}
+
+Mesh Voxel::volumeToMesh(openvdb::FloatGrid::Ptr sdfGrid)
+{
+    std::vector<openvdb::Vec3s> points;
+    std::vector<openvdb::Vec3I> triangles;
+    std::vector<openvdb::Vec4I> quads;
+    openvdb::tools::volumeToMesh(*sdfGrid, points, triangles, quads);
+    Mesh voxelMesh;
+    std::vector<vertex_descriptor> vertices;
+    for (const auto& p : points)
+    {
+        vertices.push_back(voxelMesh.add_vertex(Point_3(p[0], p[1], p[2])));
+    }
+    for (const auto& quad : quads)
+    {
+        voxelMesh.add_face(vertices[quad[3]], vertices[quad[2]], vertices[quad[1]], vertices[quad[0]]);
+    }
+    return voxelMesh;
+}
+
+size_t Voxel::countInteriorVoxels(const openvdb::FloatGrid::Ptr& grid)
+{
+    size_t count = 0;
+    for (auto it = grid->cbeginValueOn(); it; ++it) 
+    {
+        if (it.getValue() <= 0.0f) ++count;
+    }
+    return count;
 }

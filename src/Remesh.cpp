@@ -2,7 +2,7 @@
 
 RemeshManager::RemeshManager(Mesh* inMesh) : mesh(inMesh)
 {
-	partitionMap = UtilLib::PartitionByNormal(*mesh);
+	partitionMap = UtilLib::PartitionByNormal(*mesh, 0.00005);
 	fChartMap = mesh->property_map<face_descriptor, size_t>("f:chart").first;
 	vCornerMap = mesh->add_property_map<vertex_descriptor, bool>("v:corner", false).first;
 	for (auto vertex : mesh->vertices())

@@ -9,8 +9,9 @@
 #include <openvdb/tools/LevelSetFilter.h>
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/tools/FastSweeping.h>
+#include <openvdb/tools/Composite.h>
+#include <openvdb/tools/LevelSetMeasure.h>
 
-using GridType = openvdb::FloatGrid;
 
 class CGALMeshAdapter 
 {
@@ -18,16 +19,16 @@ public:
     explicit CGALMeshAdapter(const Mesh* mesh, const openvdb::math::Transform::Ptr transform)
         : mesh(mesh), transform(transform) {}
 
-    // ÃæµÄÊıÁ¿£¨¶à±ßĞÎÊı£©
+    // é¢çš„æ•°é‡ï¼ˆå¤šè¾¹å½¢æ•°ï¼‰
     size_t polygonCount() const;
 
-    // ¶¥µãµÄÊıÁ¿
+    // é¡¶ç‚¹çš„æ•°é‡
     size_t pointCount() const;
 
-    // Ä³¸öÃæµÄ¶¥µãÊıÁ¿
+    // æŸä¸ªé¢çš„é¡¶ç‚¹æ•°é‡
     size_t vertexCount(size_t n) const;
 
-    // »ñÈ¡Ë÷Òı¿Õ¼äÖĞµÄ¶¥µã×ø±ê
+    // è·å–ç´¢å¼•ç©ºé—´ä¸­çš„é¡¶ç‚¹åæ ‡
     void getIndexSpacePoint(size_t n, size_t v, openvdb::Vec3d& pos) const;
 
 private:
@@ -38,4 +39,7 @@ private:
 namespace Voxel
 {
     openvdb::FloatGrid::Ptr sharpen_vdb(openvdb::FloatGrid::Ptr sdfGrid);
+
+    Mesh volumeToMesh(openvdb::FloatGrid::Ptr sdfGrid);
+    size_t countInteriorVoxels(const openvdb::FloatGrid::Ptr& grid);
 }

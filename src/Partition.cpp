@@ -298,6 +298,30 @@ void PartitionManager::ReconstructPartitionMesh()
 				}
 				partition->partitionMesh.add_face(vertices[0], vertices[1], vertices[2]);
 			}
+
+			std::vector<Point_3> points;
+			for (const auto& point : partition->partitionMesh.points())
+			{
+				points.push_back(point);
+			}
+			Mesh chMesh;
+			CGAL::convex_hull_3(points.begin(), points.end(), chMesh);
+			std::vector<Point_3> convexHullPoints;
+			float maxDistSq = 0.0;
+			for (auto it1 = chMesh.points().begin(); it1 != chMesh.points().end(); ++it1) 
+			{
+				for (auto it2 = std::next(it1); it2 != chMesh.points().end(); ++it2) 
+				{
+					float d = CGAL::squared_distance(*it1, *it2);
+					if (d > maxDistSq) 
+					{
+						maxDistSq = d;
+					}
+				}
+			}
+			partition->partitionPlaneMesh = UtilLib::CreatePlaneMesh(partition->fitPlane, partition->centerPoint, std::sqrt(maxDistSq) * 0.7);
 		}
 	}
+
+
 }

@@ -26,6 +26,7 @@ public:
 	PartitionSet* partitionSet = nullptr;
 	bool bIsValid = true;
 	Mesh partitionMesh;
+	Mesh partitionPlaneMesh;
 
 public:
 	void CalculateAverageNormal();
@@ -54,7 +55,6 @@ public:
 	void RemovePartition(Partition* partition);
 	void UpdateMean();
 	std::set<Point_3> GetCoveredPoints();
-	void DrawPlane();
 };
 
 

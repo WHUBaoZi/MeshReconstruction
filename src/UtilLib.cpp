@@ -364,7 +364,7 @@ void UtilLib::CentralizeMesh(Mesh& mesh)
 	}
 }
 
-std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mesh, double thresholdAngle)
+std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mesh, double threshold, double thresholdAngle)
 {
 	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
 	if (!fNormalMap)
@@ -433,7 +433,7 @@ std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mes
 		currenId++;
 		currentColor = GenerateRandomColor();
 	}
-	CGAL::IO::write_PLY("OriginalClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+	CGAL::IO::write_PLY(TEST_OUTPUT_PATH + "OriginalClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 
 	std::vector<size_t> smallPartitions;
 	std::vector<size_t> partitions;
@@ -482,19 +482,16 @@ std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mes
 	
 	std::sort(partitions.begin(), partitions.end(), [&](const int& indexA, const int& indexB) {return partitionsArea.at(indexA) > partitionsArea.at(indexB); });
 	double thresholdPercent = 0.95;
-	double thresholdArea = 0.001 * totalArea;
+	double thresholdArea = threshold * totalArea;
 	double sumArea = 0;
 	for (size_t i = 0; i < partitions.size(); i++)
 	{
 		size_t partitionId = partitions[i];
 		double area = partitionsArea[partitionId];
 		double perimeter = partitionsPerimeter[partitionId];
-		if (sumArea / totalArea > thresholdPercent)
+		if (perimeter * perimeter / area > 45 || area < thresholdArea)
 		{
-			if (perimeter * perimeter / area > 45 || area < thresholdArea)
-			{
-				smallPartitions.push_back(partitionId);
-			}
+			smallPartitions.push_back(partitionId);
 		}
 		sumArea += area;
 	}

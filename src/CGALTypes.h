@@ -40,6 +40,7 @@
 #include <CGAL/linear_least_squares_fitting_3.h>
 #include <CGAL/Constrained_Delaunay_triangulation_2.h>
 #include <CGAL/mark_domain_in_triangulation.h>
+#include <CGAL/convex_hull_3.h>
 
 //typedef CGAL::Simple_cartesian<double> Kernel;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;

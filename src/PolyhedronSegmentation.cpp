@@ -8,7 +8,7 @@ Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<std::shared_ptr<Partitio
 		CGAL::Bounded_side boundResult = insideTester(partition->centerPoint);
 		if (boundResult == CGAL::ON_UNBOUNDED_SIDE)
 		{
-			if (CGAL::Polygon_mesh_processing::do_intersect(polyhedronMesh, partition->partitionMesh))
+			if (CGAL::Polygon_mesh_processing::do_intersect(polyhedronMesh, partition->partitionPlaneMesh))
 			{
 				partitions.push_back(partition);
 			}
@@ -92,18 +92,19 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 	cubeCenter = UtilLib::GetMeshCenterPoint(cubeMesh);
 	std::vector<std::shared_ptr<Partition>> initialPartitions;
 	boost::filesystem::create_directories(outputPath + "ClipPartitions");
-	Mesh originalPartitions;
+	boost::filesystem::create_directories(outputPath + "ClipPartitions/OriginalClipPartitions");
 	for (auto& pair : partitionManager->partitionMap)
 	{
 		auto& partition = pair.second;
+		Mesh planeMesh = UtilLib::CreatePlaneMesh(partition->fitPlane, partition->centerPoint);
 		if (partition->bIsValid)
 		{
 			initialPartitions.push_back(partition);
-			CGAL::IO::write_OBJ(outputPath + "ClipPartitions/ClipPartition_" + std::to_string(partition->partitionIndex) + ".obj", UtilLib::CreatePlaneMesh(partition->fitPlane, partition->centerPoint));
+			CGAL::IO::write_OBJ(outputPath + "ClipPartitions/ClipPartition_" + std::to_string(partition->partitionIndex) + ".obj", planeMesh);
 		}
-		UtilLib::CreatePlaneMesh(partition->fitPlane, partition->centerPoint, originalPartitions);
+		CGAL::IO::write_OBJ(outputPath + "ClipPartitions/OriginalClipPartitions/" + std::to_string(partition->partitionIndex) + ".obj", planeMesh);
 	}
-	CGAL::IO::write_OBJ(outputPath + "ClipPartitions/OriginalClipPartitions.obj", originalPartitions);
+	
 
 	polyhedrons.push(std::shared_ptr<Polyhedron>(new Polyhedron(cubeMesh, initialPartitions)));
 	int loopNum = 1;
@@ -156,24 +157,72 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 
 
 
-	Tree tree(mesh->faces().begin(), mesh->faces().end(), *mesh);
+
 	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useless/");
 	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useful/");
+	openvdb::util::NullInterrupter interrupter;
+	openvdb::math::Transform::Ptr transformCheck = openvdb::math::Transform::createLinearTransform(0.1);
+	CGALMeshAdapter adapterMesh(mesh, transformCheck);
+	openvdb::FloatGrid::Ptr meshGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+		interrupter,
+		adapterMesh,
+		*transformCheck,
+		1.0f,
+		std::numeric_limits<float>::max()
+	);
+
+	Mesh testVolumeMesh = Voxel::volumeToMesh(meshGrid);
+	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "originalVolumeMesh.obj", testVolumeMesh);
+
 	std::vector<int> usefulPolyhedrons;
 	for (int i = 0; i < indivisiblePolyhedrons.size(); i++)
 	{
-		Point_3 centroid = CGAL::Polygon_mesh_processing::centroid(indivisiblePolyhedrons[i]->polyhedronMesh);
-		// Ray questRay(centroid, Point_3(centroid.x() + 1, centroid.y(), centroid.z()));
-		Ray questRay(centroid, cubeCenter);
-		std::size_t intersections = tree.number_of_intersected_primitives(questRay);
-		if (intersections % 2 == 0)
+		auto polyhedron = indivisiblePolyhedrons[i];
+		CGALMeshAdapter adapterPolyhedron(&polyhedron->polyhedronMesh, transformCheck);
+		openvdb::FloatGrid::Ptr polyhedronGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+			interrupter,
+			adapterPolyhedron,
+			*transformCheck,
+			1.0f,
+			std::numeric_limits<float>::max()
+		);
+		openvdb::FloatGrid::Ptr intersectionGrid = openvdb::tools::csgIntersectionCopy(*polyhedronGrid, *meshGrid);
+
+		Mesh volumePolyhedronMesh = Voxel::volumeToMesh(polyhedronGrid);
+		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "VolumePolyhedronMesh.obj", volumePolyhedronMesh);
+		Mesh intersectionPolyhedronMesh = Voxel::volumeToMesh(intersectionGrid);
+		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "IntersectionPolyhedronMesh.obj", intersectionPolyhedronMesh);
+
+		if (!intersectionGrid || intersectionGrid->empty())
 		{
 			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", indivisiblePolyhedrons[i]->polyhedronMesh);
+			continue;
 		}
-		else 
+
+		//openvdb::tools::LevelSetMeasure<openvdb::FloatGrid>
+		//	polyhedronMeasure(*polyhedronGrid);
+		//openvdb::tools::LevelSetMeasure<openvdb::FloatGrid>
+		//	intersectionMeasure(*intersectionGrid);
+
+		//double polyhedronVolume = polyhedronMeasure.volume(true);
+		//double intersectionVolume = intersectionMeasure.volume(true);
+		size_t polyhedronVoxelCount = Voxel::countInteriorVoxels(polyhedronGrid);
+		size_t intersectionVoxelCount = Voxel::countInteriorVoxels(intersectionGrid);
+
+		double ratio = static_cast<float>(intersectionVoxelCount) / polyhedronVoxelCount;
+
+
+		//size_t polyhedronVoxelCount = polyhedronGrid->tree().activeLeafVoxelCount();
+		//size_t intersectionVoxelCount = intersectionGrid->tree().activeLeafVoxelCount();
+		//float ratio = static_cast<float>(intersectionVoxelCount) / polyhedronVoxelCount;
+		if (ratio > 0.8)
 		{
 			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", indivisiblePolyhedrons[i]->polyhedronMesh);
 			usefulPolyhedrons.push_back(i);
+		}
+		else
+		{
+			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", indivisiblePolyhedrons[i]->polyhedronMesh);
 		}
 	}
 
@@ -203,38 +252,23 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 			mergedMesh.add_face(newFace);
 		}
 	}
-	CGAL::IO::write_OBJ("MergedMesh.obj", mergedMesh);
+	CGAL::IO::write_OBJ(outputPath + "../MergedMesh.obj", mergedMesh);
 
 
 #pragma region Merge polyhedrons
 	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.1);
-	int flags = openvdb::tools::DISABLE_RENORMALIZATION;
 	CGALMeshAdapter adapter(&mergedMesh, transform);
-	openvdb::util::NullInterrupter interrupter;
-	GridType::Ptr sdfGrid = openvdb::tools::meshToVolume<GridType>(
+	openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
 		interrupter,
 		adapter,
 		*transform,
 		1.0f,
 		std::numeric_limits<float>::max()
 	);
-	std::vector<openvdb::Vec3s> points;
-	std::vector<openvdb::Vec3I> triangles;
-	std::vector<openvdb::Vec4I> quads;
-	openvdb::tools::volumeToMesh(*sdfGrid, points, triangles, quads);
-	Mesh voxelMesh, remeshedMesh;
-	std::vector<vertex_descriptor> vertices;
-	for (const auto& p : points)
-	{
-		vertices.push_back(voxelMesh.add_vertex(Point_3(p[0], p[1], p[2])));
-	}
-	for (const auto& quad : quads)
-	{
-		voxelMesh.add_face(vertices[quad[3]], vertices[quad[2]], vertices[quad[1]], vertices[quad[0]]);
-	}
-	CGAL::IO::write_OBJ(outputPath + "VoxelMesh.obj", voxelMesh);
+	Mesh voxelMesh = Voxel::volumeToMesh(sdfGrid);
+	CGAL::IO::write_OBJ(outputPath + "../VoxelMesh.obj", voxelMesh);
 	CGAL::Polygon_mesh_processing::triangulate_faces(voxelMesh);
-	CGAL::IO::write_OBJ(outputPath + "VoxelMesh_Triangulate.obj", voxelMesh);
+	CGAL::IO::write_OBJ(outputPath + "../VoxelMesh_Triangulate.obj", voxelMesh);
 #pragma endregion
 
 
