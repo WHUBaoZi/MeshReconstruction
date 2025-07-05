@@ -8,6 +8,80 @@
 //
 //int main(int argc, char* argv[])
 //{
+//	Mesh testMesh;
+//	auto v0 = testMesh.add_vertex(Point_3(0.f, 0.f, 0.f));
+//	auto v1 = testMesh.add_vertex(Point_3(3.f, 0.f, 0.f));
+//	auto v2 = testMesh.add_vertex(Point_3(3.f, 3.f, 0.f));
+//	auto v3 = testMesh.add_vertex(Point_3(0.f, 3.f, 0.f));
+//
+//	auto v4 = testMesh.add_vertex(Point_3(1.f, 1.f, 0.f));
+//	auto v5 = testMesh.add_vertex(Point_3(2.f, 1.f, 0.f));
+//	auto v6 = testMesh.add_vertex(Point_3(2.f, 2.f, 0.f));
+//	auto v7 = testMesh.add_vertex(Point_3(1.f, 2.f, 0.f));
+//
+//	std::vector<vertex_descriptor> polygon1;
+//	std::vector<vertex_descriptor> polygon2;
+//	polygon1.push_back(v0);
+//	polygon1.push_back(v1);
+//	polygon1.push_back(v2);
+//	polygon1.push_back(v3);
+//
+//	polygon2.push_back(v4);
+//	polygon2.push_back(v5);
+//	polygon2.push_back(v6);
+//	polygon2.push_back(v7);
+//
+//	CDT cdt;
+//	std::vector<CDT::Vertex_handle> vhs1, vhs2;
+//	std::map<CDT::Vertex_handle, vertex_descriptor> v2v;
+//	for (size_t i = 0; i < polygon1.size(); i++)
+//	{
+//		Point_3 p3 = testMesh.point(polygon1[i]);
+//		Point_2 p2(p3.x(), p3.y());
+//		auto vh = cdt.insert(p2);
+//		v2v[vh] = polygon1[i];
+//		vhs1.push_back(vh);
+//	}
+//	for (size_t i = 0; i < vhs1.size(); i++)
+//	{
+//		cdt.insert_constraint(vhs1[i], vhs1[(i + 1) % vhs1.size()]);
+//	}
+//
+//	for (size_t i = 0; i < polygon2.size(); i++)
+//	{
+//		Point_3 p3 = testMesh.point(polygon2[i]);
+//		Point_2 p2(p3.x(), p3.y());
+//		auto vh = cdt.insert(p2);
+//		v2v[vh] = polygon2[i];
+//		vhs2.push_back(vh);
+//	}
+//	for (size_t i = 0; i < vhs2.size(); i++)
+//	{
+//		cdt.insert_constraint(vhs2[i], vhs2[(i + 1) % vhs2.size()]);
+//	}
+//
+//	std::unordered_map<Face_handle, bool> in_domain_map;
+//	boost::associative_property_map<std::unordered_map<Face_handle, bool>> in_domain(in_domain_map);
+//	CGAL::mark_domain_in_triangulation(cdt, in_domain);
+//
+//	for (Face_handle f : cdt.finite_face_handles())
+//	{
+//		if (!get(in_domain, f))
+//		{
+//			continue;
+//		}
+//		std::vector<CDT::Vertex_handle> faceVhs;
+//		faceVhs.reserve(3);
+//		for (int j = 0; j < 3; ++j)
+//		{
+//			CDT::Vertex_handle vh = f->vertex(j);
+//			faceVhs.push_back(vh);
+//		}
+//		testMesh.add_face(v2v.at(faceVhs[0]), v2v.at(faceVhs[1]), v2v.at(faceVhs[2]));
+//	}
+//
+//	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "TestRemesh.obj", testMesh);
+//	printf("done");
 //	// test
 //	openvdb::initialize();
 //	openvdb::FloatGrid::Ptr grid = openvdb::FloatGrid::create();

@@ -364,6 +364,16 @@ void UtilLib::CentralizeMesh(Mesh& mesh)
 	}
 }
 
+halfedge_descriptor UtilLib::GetHalfedge(vertex_descriptor source, vertex_descriptor target, const Mesh& mesh)
+{
+	for (halfedge_descriptor h : halfedges_around_target(target, mesh)) {
+		if (mesh.source(h) == source)
+			return h;
+	}
+	std::cerr << "Target halfedge undefined" << std::endl;
+	return halfedge_descriptor();
+}
+
 std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mesh, double threshold, double thresholdAngle)
 {
 	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
@@ -435,6 +445,11 @@ std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mes
 	}
 	CGAL::IO::write_PLY(TEST_OUTPUT_PATH + "OriginalClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 
+	if (threshold == 0.0)
+	{
+		return partitionsMap;
+	}
+
 	std::vector<size_t> smallPartitions;
 	std::vector<size_t> partitions;
 	std::map<size_t, double> partitionsArea;
@@ -481,15 +496,13 @@ std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mes
 	}
 	
 	std::sort(partitions.begin(), partitions.end(), [&](const int& indexA, const int& indexB) {return partitionsArea.at(indexA) > partitionsArea.at(indexB); });
-	double thresholdPercent = 0.95;
 	double thresholdArea = threshold * totalArea;
 	double sumArea = 0;
 	for (size_t i = 0; i < partitions.size(); i++)
 	{
 		size_t partitionId = partitions[i];
 		double area = partitionsArea[partitionId];
-		double perimeter = partitionsPerimeter[partitionId];
-		if (perimeter * perimeter / area > 45 || area < thresholdArea)
+		if (area < thresholdArea)
 		{
 			smallPartitions.push_back(partitionId);
 		}
@@ -538,6 +551,39 @@ std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mes
 		}
 	}
 	return partitionsMap;
+}
+
+Mesh UtilLib::ConstructWirframeMesh(const std::map<size_t, std::vector<vertex_descriptor>>& boundaryMap, const Mesh& baseMesh)
+{
+	Mesh wireframeMesh;
+	std::map<vertex_descriptor, vertex_descriptor> v2v;
+	for (auto& pair : boundaryMap)
+	{
+		auto& vertices = pair.second;
+		for (size_t i = 0; i < vertices.size(); i++)
+		{
+			const vertex_descriptor& vertex = vertices[i];
+			if (v2v.find(vertex) == v2v.end())
+			{
+				v2v[vertex] = wireframeMesh.add_vertex(baseMesh.point(vertex));
+			}
+		}
+		for (size_t i = 0; i < vertices.size(); i++)
+		{
+			vertex_descriptor currV = vertices[i];
+			vertex_descriptor nextV;
+			if (i == vertices.size() - 1)
+			{
+				nextV = vertices[0];
+			}
+			else
+			{
+				nextV = vertices[i + 1];
+			}
+			wireframeMesh.add_edge(v2v[currV], v2v[nextV]);
+		}
+	}
+	return wireframeMesh;
 }
 
 void UtilLib::BuildLocalBasis(const Vector_3& normal, Vector_3& u, Vector_3& v)
@@ -601,3 +647,22 @@ double UtilLib::EdgeLength(halfedge_descriptor h, const Mesh& mesh)
 
 	return std::sqrt(CGAL::squared_distance(p1, p2));
 }
+
+void UtilLib::FillHoles(Mesh& mesh)
+{
+	std::vector<halfedge_descriptor> border_cycles;
+	CGAL::Polygon_mesh_processing::extract_boundary_cycles(mesh, std::back_inserter(border_cycles));
+
+	for (halfedge_descriptor h : border_cycles)
+	{
+		std::vector<face_descriptor>  patch_facets;
+		std::vector<vertex_descriptor> patch_vertices;
+
+		CGAL::Polygon_mesh_processing::triangulate_hole(
+			mesh,
+			h,
+			std::back_inserter(patch_facets),
+			CGAL::Polygon_mesh_processing::parameters::use_delaunay_triangulation(false));
+	}
+}
+

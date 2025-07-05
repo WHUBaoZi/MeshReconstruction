@@ -4,7 +4,6 @@
 
 
 class RemeshPartition;
-class RemeshPoint;
 
 class RemeshManager
 {
@@ -23,9 +22,6 @@ public:
 	std::map<size_t, std::set<face_descriptor>> partitionMap;
 
 	std::map<size_t, std::unique_ptr<RemeshPartition>> remeshPartitions;
-
-	// vertex_descriptor in mesh -> RemeshPoint
-	std::map<vertex_descriptor, std::unique_ptr<RemeshPoint>> remeshPoints;
 
 public:
 	Mesh* Run(std::string outputPath);
@@ -62,35 +58,8 @@ public:
 
 	Vector_3 v;
 
-	// cdtVertex -> vertex in mesh
-	std::map<CDT::Vertex_handle, vertex_descriptor> v2v;
-
 public:
 	std::vector<std::vector<halfedge_descriptor>> ExtractBoundaries(const halfedge_descriptor& startHalfedge, std::map<vertex_descriptor, std::set<halfedge_descriptor>>& sourceHalfdegesMap);
 
 	Point_2 ProjectTo2D(Point_3 point3);
-
-	void ApplyRemesh();
-};
-
-class RemeshPoint
-{
-public:
-	RemeshPoint(vertex_descriptor inVertex, RemeshManager* inRemeshManager);
-
-public:
-	RemeshManager* remeshManager;
-
-	Point_3 point3;
-
-	vertex_descriptor vertex;
-
-	Point_2 point2;
-
-	CDT::Vertex_handle cdtVertex;
-
-	vertex_descriptor newVertex;
-
-public:
-	void Update(Point_2 inPoint2, CDT::Vertex_handle inCdtVertex);
 };

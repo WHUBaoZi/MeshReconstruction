@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 #pragma region Optimize
 	std::cout << "Start partition optimize..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
-	float areaTolerancePercent = 0.001;
+	float areaTolerancePercent = 0.005;
 	double totalArea = 0.0;
 	std::vector<int> partitionIndices;
 	for (const auto& pair : partitionManager.partitionMap)

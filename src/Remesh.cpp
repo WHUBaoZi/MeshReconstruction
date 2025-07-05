@@ -85,6 +85,7 @@ Mesh* RemeshManager::Run(std::string outputPath)
 	UtilLib::WriteWireframeOBJ(outputPath + "WireframeOBJ.obj", wireframeMesh);
 	UtilLib::WriteWireframeOBJ(outputPath + "OriginWireframeOBJ.obj", originalWireframeMesh);
 
+	std::map<vertex_descriptor, vertex_descriptor> v2NewV;
 	for (const auto& pair : remeshPartitions)
 	{
 		size_t id = pair.first;
@@ -92,26 +93,23 @@ Mesh* RemeshManager::Run(std::string outputPath)
 		if (partition->bIsValid)
 		{
 			CDT cdt;
-			std::vector<Polygon_2> polygons;
+			std::vector<CDT::Vertex_handle> vhs;
+			std::map<CDT::Vertex_handle, vertex_descriptor> v2v;
 			for (size_t i = 0; i < partition->simpBoundaries.size(); i++)
 			{
 				const auto& boundary = partition->simpBoundaries[i];
-				polygons.push_back(Polygon_2());
 				for (const auto& vertex : boundary)
 				{
-					if (remeshPoints.find(vertex) == remeshPoints.end())
-					{
-						remeshPoints[vertex] = std::make_unique<RemeshPoint>(vertex, this);
-					}
-					auto& remeshPoint = remeshPoints.at(vertex);
-					Point_2 p2 = partition->ProjectTo2D(remeshPoint->point3);
-					remeshPoint->Update(p2, cdt.insert(p2));
-					partition->v2v[remeshPoint->cdtVertex] = vertex;
-					polygons[i].push_back(p2);
+					Point_2 p2 = partition->ProjectTo2D(mesh->point(vertex));
+					auto cdtV = cdt.insert(p2);
+					v2v[cdtV] = vertex;
+					vhs.push_back(cdtV);
 				}
-				cdt.insert_constraint(polygons[i].vertices_begin(), polygons[i].vertices_end(), true);
 			}
-			size_t num = cdt.number_of_vertices();
+			for (size_t i = 0; i < vhs.size(); i++)
+			{
+				cdt.insert_constraint(vhs[i], vhs[(i + 1) % vhs.size()]);
+			}
 			std::unordered_map<Face_handle, bool> in_domain_map;
 			boost::associative_property_map<std::unordered_map<Face_handle, bool>>in_domain(in_domain_map);
 			CGAL::mark_domain_in_triangulation(cdt, in_domain);
@@ -127,7 +125,7 @@ Mesh* RemeshManager::Run(std::string outputPath)
 				{
 					CDT::Vertex_handle vh = f->vertex(j);
 					faceVhs.push_back(vh);
-					if (partition->v2v.find(vh) == partition->v2v.end())
+					if (v2v.find(vh) == v2v.end())
 					{
 						faceValid = false;
 						break;
@@ -138,16 +136,19 @@ Mesh* RemeshManager::Run(std::string outputPath)
 					std::cerr << "Warning: Face has unmapped vertex, skipping." << std::endl;
 					continue;
 				}
+				std::vector<vertex_descriptor> newVertices;
+				newVertices.reserve(3);
+				for (size_t i = 0; i < faceVhs.size(); i++)
+				{
+					auto oldVertex = v2v.at(faceVhs[i]);
+					if (v2NewV.find(oldVertex) == v2NewV.end())
+					{
+						v2NewV[oldVertex] = remeshedMesh.add_vertex(mesh->point(oldVertex));
+					}
+					newVertices.push_back(v2NewV[oldVertex]);
+				}
 
-
-				vertex_descriptor vertex0 = partition->v2v.at(faceVhs[0]);
-				vertex_descriptor vertex1 = partition->v2v.at(faceVhs[1]);
-				vertex_descriptor vertex2 = partition->v2v.at(faceVhs[2]);
-				vertex_descriptor newVertex0 = remeshPoints.at(vertex0)->newVertex;
-				vertex_descriptor newVertex1 = remeshPoints.at(vertex1)->newVertex;
-				vertex_descriptor newVertex2 = remeshPoints.at(vertex2)->newVertex;
-
-				remeshedMesh.add_face(newVertex0, newVertex1, newVertex2);
+				remeshedMesh.add_face(newVertices[0], newVertices[1], newVertices[2]);
 			}
 		}
 	}
@@ -291,16 +292,4 @@ Point_2 RemeshPartition::ProjectTo2D(Point_3 point3)
 {
 	Vector_3 vec = point3 - fitPlane.point();
 	return Point_2(vec * u, vec * v);
-}
-
-RemeshPoint::RemeshPoint(vertex_descriptor inVertex, RemeshManager* inRemeshManager): vertex(inVertex), remeshManager(inRemeshManager)
-{
-	point3 = inRemeshManager->mesh->point(vertex);
-	newVertex = inRemeshManager->remeshedMesh.add_vertex(point3);
-}
-
-void RemeshPoint::Update(Point_2 inPoint2, CDT::Vertex_handle inCdtVertex)
-{
-	this->point2 = inPoint2;
-	this->cdtVertex = inCdtVertex;
 }

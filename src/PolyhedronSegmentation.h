@@ -20,9 +20,8 @@ public:
 
 	Polyhedron(Mesh polyhedronMesh, std::vector<std::shared_ptr<Partition>> parentPartitions);
 
-	Mesh DrawPlanesMesh();
+	void Remesh();
 
-	inline int GetMinIntersectionIndex(){ return std::distance(planeIntersectionNums.begin(), std::min_element(planeIntersectionNums.begin(), planeIntersectionNums.end())); }
 };
 
 class PolyhedronSegmentation

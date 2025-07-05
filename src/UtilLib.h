@@ -54,13 +54,19 @@ namespace UtilLib
 
 	void CentralizeMesh(Mesh& mesh);
 
+	halfedge_descriptor GetHalfedge(vertex_descriptor source, vertex_descriptor target, const Mesh& mesh);
+
 	std::map<size_t, std::set<face_descriptor>> PartitionByNormal(Mesh& mesh, double threshold = 0.001, double thresholdAngle = 15);
+
+	Mesh ConstructWirframeMesh(const std::map<size_t, std::vector<vertex_descriptor>>& boundaryMap, const Mesh& baseMesh);
 
 	void BuildLocalBasis(const Vector_3& normal, Vector_3& u, Vector_3& v);
 
 	void WriteWireframeOBJ(std::string outputFileName, const Mesh& mesh);
 
 	double EdgeLength(halfedge_descriptor h, const Mesh& mesh);
+
+	void FillHoles(Mesh& mesh);
 
 	inline Plane_3 ReversePlane(const Plane_3& plane) { return Plane_3(-plane.a(), -plane.b(), -plane.c(), -plane.d()); }
 
