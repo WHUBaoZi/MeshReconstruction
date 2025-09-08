@@ -89,17 +89,11 @@ void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 
 Point_3 UtilLib::GetFaceCenter(const face_descriptor& face, const Mesh& mesh)
 {
-	int size = 0;
-	Vector_3 sum(0, 0, 0);
-	for (auto vertex : CGAL::vertices_around_face(mesh.halfedge(face), mesh))
-	{
-		Point_3 point = mesh.point(vertex);
-		sum += Vector_3(point.x(), point.y(), point.z());
-		size++;
+	std::vector<Point_3> points;
+	for (auto vertex : CGAL::vertices_around_face(mesh.halfedge(face), mesh)) {
+		points.push_back(mesh.point(vertex));
 	}
-	sum /= size;
-	Point_3 centerPoint = Point_3(sum.x(), sum.y(), sum.z());
-	return centerPoint;
+	return CGAL::centroid(points.begin(), points.end(), CGAL::Dimension_tag<0>());
 }
 
 std::set<face_descriptor> UtilLib::GetKRingFaces(const face_descriptor& face, int kRing, const Mesh& mesh)

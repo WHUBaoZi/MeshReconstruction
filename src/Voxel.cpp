@@ -71,3 +71,24 @@ size_t Voxel::countInteriorVoxels(const openvdb::FloatGrid::Ptr& grid)
     }
     return count;
 }
+
+openvdb::Vec3f Voxel::sampleGradient(
+    const openvdb::tools::GridSampler<openvdb::FloatTree, openvdb::tools::BoxSampler>& sampler,
+    const openvdb::Vec3d& worldPos)
+{
+    // 获取体素单位长度作为差分步长
+    const double eps = sampler.transform().voxelSize()[0];
+
+    // 中心差分方向向量
+    const openvdb::Vec3d dx(eps, 0.0, 0.0);
+    const openvdb::Vec3d dy(0.0, eps, 0.0);
+    const openvdb::Vec3d dz(0.0, 0.0, eps);
+
+    const float gx = static_cast<float>(
+        (sampler.wsSample(worldPos + dx) - sampler.wsSample(worldPos - dx)) / (2.0 * eps));
+    const float gy = static_cast<float>(
+        (sampler.wsSample(worldPos + dy) - sampler.wsSample(worldPos - dy)) / (2.0 * eps));
+    const float gz = static_cast<float>(
+        (sampler.wsSample(worldPos + dz) - sampler.wsSample(worldPos - dz)) / (2.0 * eps));
+    return openvdb::Vec3f(gx, gy, gz);
+}

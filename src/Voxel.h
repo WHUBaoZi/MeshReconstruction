@@ -42,4 +42,5 @@ namespace Voxel
 
     Mesh volumeToMesh(openvdb::FloatGrid::Ptr sdfGrid);
     size_t countInteriorVoxels(const openvdb::FloatGrid::Ptr& grid);
+    openvdb::Vec3f sampleGradient(const openvdb::tools::GridSampler<openvdb::FloatTree, openvdb::tools::BoxSampler>& sampler, const openvdb::Vec3d& worldPos);
 }

@@ -303,7 +303,7 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 			adapterPolyhedron,
 			*transformCheck,
 			0.1f,
-			std::numeric_limits<float>::max()
+			1.f
 		);
 		openvdb::FloatGrid::Ptr intersectionGrid = openvdb::tools::csgIntersectionCopy(*polyhedronGrid, *meshGrid);
 
