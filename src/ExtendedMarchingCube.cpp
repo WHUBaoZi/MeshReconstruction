@@ -1,21 +1,67 @@
 #include "ExtendedMarchingCube.h"
 
-int main(int argc, char* argv[])
-{	
-	Mesh mesh;
-	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh("D:/DATA/AcademicRelevance/MeshReconstruction/MeshReconstruction/MeshReconstruction/Data/Output/test6_HoleFill/MergedMesh.obj", mesh);
-	//mesh = UtilLib::CreateCube(Point_3(-10.0, -10.0, -10.0), Point_3(10.0, 10.0, 10.0));
-	openvdb::util::NullInterrupter interrupter;
-	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.1);
-	CGALMeshAdapter adapter(&mesh, transform);
-	openvdb::FloatGrid::Ptr grid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
-		interrupter,
-		adapter,
-		*transform,
-		3.f,
-		3.f
-	);
+//int main(int argc, char* argv[])
+//{	
+//	Mesh mesh;
+//	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh("D:/DATA/AcademicRelevance/MeshReconstruction/MeshReconstruction/MeshReconstruction/Data/Output/test6_HoleFill/MergedMesh.obj", mesh);
+//	//mesh = UtilLib::CreateCube(Point_3(-10.0, -10.0, -10.0), Point_3(10.0, 10.0, 10.0));
+//	openvdb::util::NullInterrupter interrupter;
+//	float voxelSize = 0.3;
+//	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(voxelSize);
+//	double diag = std::sqrt(3.0) * voxelSize;
+//	CGALMeshAdapter adapter(&mesh, transform);
+//	openvdb::FloatGrid::Ptr grid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+//		interrupter,
+//		adapter,
+//		*transform,
+//		3.f,
+//		3.f
+//	);
+//	ExtendedMarchingCube::ApplyExtendedMarchingCube(grid);
+//	std::cout << "test";
+//}
+
+
+//void MeshToVolume(const Mesh& mesh, openvdb::math::Transform::Ptr transform, float exteriorWidth, float interiorWidth)
+//{
+//	constexpr float floatMax = std::numeric_limits<float>::max();
+//	auto vec3dMax = openvdb::Vec3d(floatMax, floatMax, floatMax);
+//	openvdb::Vec3dGrid::Ptr vectorGrid(new openvdb::Vec3dGrid(vec3dMax));
+//	vectorGrid->setTransform(transform->copy());
+//	float voxelSize = transform->voxelSize()[0];
+//
+//	// Convert narrow band width from voxel units to world space units.
+//	exteriorWidth *= voxelSize;
+//	// Avoid the unit conversion if the interior band width is set to
+//	// inf or std::numeric_limits<float>::max().
+//	if (interiorWidth < floatMax)
+//	{
+//		interiorWidth *= voxelSize;
+//	}
+//	auto tree = Tree(mesh.faces().begin(), mesh.faces().end(), mesh);
+//
+//
+//	auto accessor = vectorGrid->getAccessor();
+//
+//	for (const auto& face : mesh.faces())
+//	{
+//		std::deque<openvdb::Coord> coordList;
+//		Point_3 center = UtilLib::GetFaceCenter(face, mesh);
+//		openvdb::Vec3d pos = transform->worldToIndex(openvdb::Vec3d(center.x(), center.y(), center.z()));
+//		openvdb::Coord ijk = openvdb::Coord::floor(pos);
+//		coordList.push_back(ijk);
+//
+//	}
+//	
+//}
+
+Mesh ExtendedMarchingCube::ApplyExtendedMarchingCube(openvdb::FloatGrid::Ptr grid)
+{
 	openvdb::FloatGrid::Accessor accessor = grid->getAccessor();
+	openvdb::math::Transform::Ptr transform = grid->transformPtr();
+	openvdb::util::NullInterrupter interrupter;
+	float voxelSize = 0.3;
+	double diag = std::sqrt(3.0) * voxelSize;
 	Mesh gridMesh;
 	std::unordered_map<openvdb::Coord, GridCell> gridCells;
 	for (auto iter = grid->cbeginValueOn(); iter; ++iter)
@@ -59,9 +105,10 @@ int main(int argc, char* argv[])
 		else
 		{
 			std::array<int, 12> edgeVertexIndices;
-			for (int edge = 0; edge < 12; ++edge) 
+			edgeVertexIndices.fill(-1);
+			for (int edge = 0; edge < 12; ++edge)
 			{
-				if (edgeMask & (1 << edge)) 
+				if (edgeMask & (1 << edge))
 				{
 					int v0 = edgeVertexPairs[edge][0];
 					int v1 = edgeVertexPairs[edge][1];
@@ -120,20 +167,17 @@ int main(int argc, char* argv[])
 				}
 				connectedComponents.emplace_back(std::vector<int>({ i }));
 				auto& component = *connectedComponents.rbegin();
+				visitedVertices.insert(i);
 				std::queue<int> q;
 				q.push(i);
 				while (!q.empty())
 				{
-					int front = q.front();
-					q.pop();
+					int front = q.front(); q.pop();
 					for (const auto& connection : adjMap[front])
 					{
-						if (visitedVertices.count(connection))
-						{
-							continue;
-						}
-						component.push_back(connection);
+						if (visitedVertices.count(connection)) continue;
 						visitedVertices.insert(connection);
+						component.push_back(connection);
 						q.push(connection);
 					}
 				}
@@ -214,10 +258,34 @@ int main(int argc, char* argv[])
 					}
 					Eigen::MatrixXd N_pinv = V * S_inv * U.transpose();
 					p_centered = N_pinv * d;
+
+					// Check Valid
+					Eigen::Vector3d p = p_centered + Eigen::Vector3d(centroid.x(), centroid.y(), centroid.z());
+					bool invalid = false;
+
+					double err = 0.0;
+					for (size_t k = 0; k < samplePoints.size(); k++) {
+						Eigen::Vector3d si(samplePoints[k].x(), samplePoints[k].y(), samplePoints[k].z());
+						Eigen::Vector3d ni(normals[k].x(), normals[k].y(), normals[k].z());
+						double dist = std::abs((p - si).dot(ni));
+						err += dist;
+					}
+					err /= samplePoints.size();
+					if (err > 0.25 * diag)
+					{
+						invalid = true;
+					}
+					if (invalid)
+					{
+						triangles.insert(triangles.end(), componentTriangles[i].begin(), componentTriangles[i].end());
+						continue;
+					}
 				}
 				else // Corner feature
 				{
-					p_centered = svd.solve(d);
+					//p_centered = svd.solve(d);
+					triangles.insert(triangles.end(), componentTriangles[i].begin(), componentTriangles[i].end());
+					continue;
 				}
 
 				// 5. 平移回原坐标系
@@ -269,16 +337,16 @@ int main(int argc, char* argv[])
 					angleMap[connectedComponent[j]] = angle;
 				}
 				std::sort(connectedComponent.begin(), connectedComponent.end(), [&](const int& a, const int& b) {return angleMap[a] < angleMap[b]; });
-				componentTriangles.clear();
-				for (int j = 0; j < size; j++)
-				{
-					componentTriangles[i].push_back({ indexP, connectedComponent[j], connectedComponent[(j + 1) % size] });
+				std::vector<std::array<int, 3>> fanTriangles;
+				fanTriangles.reserve(size);
+				for (int j = 0; j < size; ++j) {
+					fanTriangles.push_back({ indexP, connectedComponent[j], connectedComponent[(j + 1) % size] });
 				}
-				triangles.insert(triangles.end(), componentTriangles[i].begin(), componentTriangles[i].end());
+				triangles.insert(triangles.end(), fanTriangles.begin(), fanTriangles.end());
 			}
 		}
 	}
-	
+
 	Mesh marchingCubesTestMesh;
 	std::vector<vertex_descriptor> cgalVertices;
 	std::unordered_set<vertex_descriptor> cgalFeatures;
@@ -287,6 +355,8 @@ int main(int argc, char* argv[])
 		openvdb::Vec3f op = vertices[i];
 		Point_3 p(op.x(), op.y(), op.z());
 		auto vertex = marchingCubesTestMesh.add_vertex(p);
+		int id = vertex.id();
+		int idx = vertex.idx();
 		cgalVertices.push_back(vertex);
 		if (features.count(i))
 		{
@@ -305,7 +375,7 @@ int main(int argc, char* argv[])
 	// Flip edges
 	for (auto edge : marchingCubesTestMesh.edges())
 	{
-		halfedge_descriptor h1 = marchingCubesTestMesh.halfedge(edge);		
+		halfedge_descriptor h1 = marchingCubesTestMesh.halfedge(edge);
 		if (h1 == Mesh::null_halfedge())
 		{
 			continue;
@@ -326,48 +396,15 @@ int main(int argc, char* argv[])
 	}
 	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh.obj", marchingCubesTestMesh);
 
-	std::vector<halfedge_descriptor> border_cycles;
-	CGAL::Polygon_mesh_processing::extract_boundary_cycles(marchingCubesTestMesh, std::back_inserter(border_cycles));
-
-	for (auto h : border_cycles)
+	CGAL::Polygon_mesh_processing::stitch_borders(marchingCubesTestMesh);
+	std::vector<std::pair<face_descriptor, face_descriptor>> intersectedTris;
+	CGAL::Polygon_mesh_processing::self_intersections(marchingCubesTestMesh, std::back_inserter(intersectedTris));
+	for (auto& p : intersectedTris)
 	{
-		CGAL::Polygon_mesh_processing::triangulate_and_refine_hole(marchingCubesTestMesh, h, CGAL::Polygon_mesh_processing::parameters::density_control_factor(2));
+		marchingCubesTestMesh.remove_face(p.first);
+		marchingCubesTestMesh.remove_face(p.second);
 	}
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh_HoleFix.obj", marchingCubesTestMesh);
-
-	std::cout << "test";
+	CGAL::Polygon_mesh_processing::remove_isolated_vertices(marchingCubesTestMesh);
+	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh_RemoveIntersections.obj", marchingCubesTestMesh);
+	return marchingCubesTestMesh;
 }
-
-
-//void MeshToVolume(const Mesh& mesh, openvdb::math::Transform::Ptr transform, float exteriorWidth, float interiorWidth)
-//{
-//	constexpr float floatMax = std::numeric_limits<float>::max();
-//	auto vec3dMax = openvdb::Vec3d(floatMax, floatMax, floatMax);
-//	openvdb::Vec3dGrid::Ptr vectorGrid(new openvdb::Vec3dGrid(vec3dMax));
-//	vectorGrid->setTransform(transform->copy());
-//	float voxelSize = transform->voxelSize()[0];
-//
-//	// Convert narrow band width from voxel units to world space units.
-//	exteriorWidth *= voxelSize;
-//	// Avoid the unit conversion if the interior band width is set to
-//	// inf or std::numeric_limits<float>::max().
-//	if (interiorWidth < floatMax)
-//	{
-//		interiorWidth *= voxelSize;
-//	}
-//	auto tree = Tree(mesh.faces().begin(), mesh.faces().end(), mesh);
-//
-//
-//	auto accessor = vectorGrid->getAccessor();
-//
-//	for (const auto& face : mesh.faces())
-//	{
-//		std::deque<openvdb::Coord> coordList;
-//		Point_3 center = UtilLib::GetFaceCenter(face, mesh);
-//		openvdb::Vec3d pos = transform->worldToIndex(openvdb::Vec3d(center.x(), center.y(), center.z()));
-//		openvdb::Coord ijk = openvdb::Coord::floor(pos);
-//		coordList.push_back(ijk);
-//
-//	}
-//	
-//}

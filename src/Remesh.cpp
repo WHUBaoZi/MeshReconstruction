@@ -2,6 +2,10 @@
 
 RemeshManager::RemeshManager(Mesh* inMesh) : mesh(inMesh)
 {
+}
+
+Mesh RemeshManager::Run(std::string outputPath)
+{
 	partitionMap = UtilLib::PartitionByNormal(*mesh, 0.00005);
 	fChartMap = mesh->property_map<face_descriptor, size_t>("f:chart").first;
 	vCornerMap = mesh->add_property_map<vertex_descriptor, bool>("v:corner", false).first;
@@ -21,10 +25,6 @@ RemeshManager::RemeshManager(Mesh* inMesh) : mesh(inMesh)
 			vCornerMap[vertex] = true;
 		}
 	}
-}
-
-Mesh* RemeshManager::Run(std::string outputPath)
-{
 	if (!outputPath.empty() && !boost::filesystem::exists(outputPath))
 	{
 		boost::filesystem::create_directories(outputPath);
@@ -85,76 +85,119 @@ Mesh* RemeshManager::Run(std::string outputPath)
 	UtilLib::WriteWireframeOBJ(outputPath + "WireframeOBJ.obj", wireframeMesh);
 	UtilLib::WriteWireframeOBJ(outputPath + "OriginWireframeOBJ.obj", originalWireframeMesh);
 
-	std::map<vertex_descriptor, vertex_descriptor> v2NewV;
+	//////////////////////////////////////////////////////////////
+	std::map<vertex_descriptor, vertex_descriptor> v2v;
+	Mesh remeshedMesh;
+	typedef CGAL::Triple<int, int, int> Triangle_int;
 	for (const auto& pair : remeshPartitions)
 	{
 		size_t id = pair.first;
 		auto& partition = pair.second;
-		if (partition->bIsValid)
+		auto& boundaries = partition->simpBoundaries;
+		for (auto& boundary : boundaries)
 		{
-			CDT cdt;
-			std::vector<CDT::Vertex_handle> vhs;
-			std::map<CDT::Vertex_handle, vertex_descriptor> v2v;
-			for (size_t i = 0; i < partition->simpBoundaries.size(); i++)
+			std::vector<Point_3> polyline;
+			for (auto& vertex : boundary)
 			{
-				const auto& boundary = partition->simpBoundaries[i];
-				for (const auto& vertex : boundary)
-				{
-					Point_2 p2 = partition->ProjectTo2D(mesh->point(vertex));
-					auto cdtV = cdt.insert(p2);
-					v2v[cdtV] = vertex;
-					vhs.push_back(cdtV);
-				}
+				polyline.push_back(mesh->point(vertex));
 			}
-			for (size_t i = 0; i < vhs.size(); i++)
+			std::vector<Triangle_int> patch;
+			patch.reserve(polyline.size() - 2);
+			CGAL::Polygon_mesh_processing::triangulate_hole_polyline(polyline, std::back_inserter(patch));
+			for (size_t i = 0; i < patch.size(); ++i)
 			{
-				cdt.insert_constraint(vhs[i], vhs[(i + 1) % vhs.size()]);
-			}
-			std::unordered_map<Face_handle, bool> in_domain_map;
-			boost::associative_property_map<std::unordered_map<Face_handle, bool>>in_domain(in_domain_map);
-			CGAL::mark_domain_in_triangulation(cdt, in_domain);
-			for (Face_handle f : cdt.finite_face_handles())
-			{
-				if (!get(in_domain, f))
+				vertex_descriptor v1, v2, v3;
+				if (v2v.find(boundary[patch[i].first]) == v2v.end())
 				{
-					continue;
+					v2v[boundary[patch[i].first]] = remeshedMesh.add_vertex(polyline[patch[i].first]);
 				}
-				bool faceValid = true;
-				std::vector<CDT::Vertex_handle> faceVhs;
-				for (int j = 0; j < 3; ++j)
+				if (v2v.find(boundary[patch[i].second]) == v2v.end())
 				{
-					CDT::Vertex_handle vh = f->vertex(j);
-					faceVhs.push_back(vh);
-					if (v2v.find(vh) == v2v.end())
-					{
-						faceValid = false;
-						break;
-					}
+					v2v[boundary[patch[i].second]] = remeshedMesh.add_vertex(polyline[patch[i].second]);
 				}
-				if (!faceValid)
+				if (v2v.find(boundary[patch[i].third]) == v2v.end())
 				{
-					std::cerr << "Warning: Face has unmapped vertex, skipping." << std::endl;
-					continue;
+					v2v[boundary[patch[i].third]] = remeshedMesh.add_vertex(polyline[patch[i].third]);
 				}
-				std::vector<vertex_descriptor> newVertices;
-				newVertices.reserve(3);
-				for (size_t i = 0; i < faceVhs.size(); i++)
-				{
-					auto oldVertex = v2v.at(faceVhs[i]);
-					if (v2NewV.find(oldVertex) == v2NewV.end())
-					{
-						v2NewV[oldVertex] = remeshedMesh.add_vertex(mesh->point(oldVertex));
-					}
-					newVertices.push_back(v2NewV[oldVertex]);
-				}
-
-				remeshedMesh.add_face(newVertices[0], newVertices[1], newVertices[2]);
+				v1 = v2v[boundary[patch[i].first]];
+				v2 = v2v[boundary[patch[i].second]];
+				v3 = v2v[boundary[patch[i].third]];
+				remeshedMesh.add_face(v1, v2, v3);
 			}
 		}
 	}
+	//////////////////////////////////////////////////////////////
+
+	//std::map<vertex_descriptor, vertex_descriptor> v2NewV;
+	//for (const auto& pair : remeshPartitions)
+	//{
+	//	size_t id = pair.first;
+	//	auto& partition = pair.second;
+	//	if (partition->bIsValid)
+	//	{
+	//		CDT cdt;
+	//		std::vector<CDT::Vertex_handle> vhs;
+	//		std::map<CDT::Vertex_handle, vertex_descriptor> v2v;
+	//		for (size_t i = 0; i < partition->simpBoundaries.size(); i++)
+	//		{
+	//			const auto& boundary = partition->simpBoundaries[i];
+	//			for (const auto& vertex : boundary)
+	//			{
+	//				Point_2 p2 = partition->ProjectTo2D(mesh->point(vertex));
+	//				auto cdtV = cdt.insert(p2);
+	//				v2v[cdtV] = vertex;
+	//				vhs.push_back(cdtV);
+	//			}
+	//		}
+	//		for (size_t i = 0; i < vhs.size(); i++)
+	//		{
+	//			cdt.insert_constraint(vhs[i], vhs[(i + 1) % vhs.size()]);
+	//		}
+	//		std::unordered_map<Face_handle, bool> in_domain_map;
+	//		boost::associative_property_map<std::unordered_map<Face_handle, bool>>in_domain(in_domain_map);
+	//		CGAL::mark_domain_in_triangulation(cdt, in_domain);
+	//		for (Face_handle f : cdt.finite_face_handles())
+	//		{
+	//			if (!get(in_domain, f))
+	//			{
+	//				continue;
+	//			}
+	//			bool faceValid = true;
+	//			std::vector<CDT::Vertex_handle> faceVhs;
+	//			for (int j = 0; j < 3; ++j)
+	//			{
+	//				CDT::Vertex_handle vh = f->vertex(j);
+	//				faceVhs.push_back(vh);
+	//				if (v2v.find(vh) == v2v.end())
+	//				{
+	//					faceValid = false;
+	//					break;
+	//				}
+	//			}
+	//			if (!faceValid)
+	//			{
+	//				std::cerr << "Warning: Face has unmapped vertex, skipping." << std::endl;
+	//				continue;
+	//			}
+	//			std::vector<vertex_descriptor> newVertices;
+	//			newVertices.reserve(3);
+	//			for (size_t i = 0; i < faceVhs.size(); i++)
+	//			{
+	//				auto oldVertex = v2v.at(faceVhs[i]);
+	//				if (v2NewV.find(oldVertex) == v2NewV.end())
+	//				{
+	//					v2NewV[oldVertex] = remeshedMesh.add_vertex(mesh->point(oldVertex));
+	//				}
+	//				newVertices.push_back(v2NewV[oldVertex]);
+	//			}
+
+	//			remeshedMesh.add_face(newVertices[0], newVertices[1], newVertices[2]);
+	//		}
+	//	}
+	//}
 	CGAL::IO::write_OBJ(outputPath + "RemeshedResult.obj", remeshedMesh);
 
-	return &remeshedMesh;
+	return remeshedMesh;
 }
 
 RemeshPartition::RemeshPartition(size_t inId, RemeshManager* inRemeshManager, const std::set<face_descriptor>& inFaces) : id(inId), remeshManager(inRemeshManager), mesh(inRemeshManager->mesh), faces(inFaces)

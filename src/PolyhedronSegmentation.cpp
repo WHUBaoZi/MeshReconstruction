@@ -1,5 +1,9 @@
 #include "PolyhedronSegmentation.h"
 
+#include "ExtendedMarchingCube.h"
+
+#include <windows.h>
+
 Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<std::shared_ptr<Partition>> parentPartitions): polyhedronMesh(polyhedronMesh)
 {
 	for (auto partition : parentPartitions)
@@ -381,22 +385,71 @@ Mesh PolyhedronSegmentation::Run(std::string outputPath)
 
 
 #pragma region Merge polyhedrons
-	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.1);
-	CGALMeshAdapter adapter(&mergedMesh, transform);
-	openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
-		interrupter,
-		adapter,
-		*transform,
-		1.0f,
-		std::numeric_limits<float>::max()
-	);
-	Mesh voxelMesh = Voxel::volumeToMesh(sdfGrid);
-	size_t removed = CGAL::Polygon_mesh_processing::keep_largest_connected_components(voxelMesh, 1);
-	CGAL::IO::write_OBJ(outputPath + "../VoxelMesh.obj", voxelMesh);
-	CGAL::Polygon_mesh_processing::triangulate_faces(voxelMesh);
-	CGAL::IO::write_OBJ(outputPath + "../VoxelMesh_Triangulate.obj", voxelMesh);
+	Mesh voxelMesh, fixedMesh;
+	if (false)
+	{
+		openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.1);
+		CGALMeshAdapter adapter(&mergedMesh, transform);
+		openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+			interrupter,
+			adapter,
+			*transform,
+			1.0f,
+			std::numeric_limits<float>::max()
+		);
+		Mesh voxelMesh = Voxel::volumeToMesh(sdfGrid);
+		size_t removed = CGAL::Polygon_mesh_processing::keep_largest_connected_components(voxelMesh, 1);
+		CGAL::IO::write_OBJ(outputPath + "../VoxelMesh.obj", voxelMesh);
+		CGAL::Polygon_mesh_processing::triangulate_faces(voxelMesh);
+		CGAL::IO::write_OBJ(outputPath + "../VoxelMesh_Triangulate.obj", voxelMesh);
+	}
+	else
+	{
+
+
+		openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.3);
+		CGALMeshAdapter adapter(&mergedMesh, transform);
+		openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+			interrupter,
+			adapter,
+			*transform,
+			3.f,
+			3.f
+		);
+		voxelMesh = ExtendedMarchingCube::ApplyExtendedMarchingCube(sdfGrid);
+
+		STARTUPINFO si = { 0 };
+		si.cb = sizeof(si);
+		PROCESS_INFORMATION pi;
+
+		std::string inputMeshPath = outputPath + "../ExtendedMarchingCubeMesh.off";
+		std::string outputMeshPath = outputPath + "../ExtendedMarchingCubeMesh_fixed.off";
+		std::string cmd = "MeshFix.exe \"" + inputMeshPath + "\" \"" + outputMeshPath + "\"";
+		CGAL::IO::write_OFF(inputMeshPath, voxelMesh);
+
+		
+		char cmdLine[1024];
+		strcpy_s(cmdLine, cmd.c_str());
+		if (CreateProcess(
+			NULL,        // lpApplicationName 可以为 NULL
+			cmdLine,     // lpCommandLine
+			NULL, NULL, FALSE, 0, NULL, NULL,
+			&si, &pi))
+		{
+			WaitForSingleObject(pi.hProcess, INFINITE);
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+			std::cout << "MeshFix executed successfully" << std::endl;
+		}
+		else
+		{
+			DWORD error = GetLastError();
+			std::cerr << "MeshFix activate fail, error code: " << error << std::endl;
+		}
+		CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(outputMeshPath, fixedMesh);
+	}
 #pragma endregion
 
 
-    return voxelMesh;
+    return fixedMesh;
 }

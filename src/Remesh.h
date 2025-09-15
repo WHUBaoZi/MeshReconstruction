@@ -24,7 +24,7 @@ public:
 	std::map<size_t, std::unique_ptr<RemeshPartition>> remeshPartitions;
 
 public:
-	Mesh* Run(std::string outputPath);
+	Mesh Run(std::string outputPath);
 };
 
 
