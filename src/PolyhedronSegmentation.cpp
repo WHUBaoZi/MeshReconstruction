@@ -28,7 +28,7 @@ Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<std::shared_ptr<Partitio
 void Polyhedron::Remesh()
 {
 	auto partitionsMap = UtilLib::PartitionByNormal(polyhedronMesh, 0.0, 0.01);
-	auto fChartMap = polyhedronMesh.property_map<face_descriptor, size_t>("f:chart").first;
+	auto fChartMap = *polyhedronMesh.property_map<face_descriptor, size_t>("f:chart");
 	std::map<size_t, std::vector<vertex_descriptor>> boundaryVerticesMap;
 	std::map<size_t, std::vector<vertex_descriptor>> simpBoundaryVerticesMap;
 	// partitions traverse

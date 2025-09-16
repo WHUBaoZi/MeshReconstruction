@@ -7,7 +7,7 @@ RemeshManager::RemeshManager(Mesh* inMesh) : mesh(inMesh)
 Mesh RemeshManager::Run(std::string outputPath)
 {
 	partitionMap = UtilLib::PartitionByNormal(*mesh, 0.00005);
-	fChartMap = mesh->property_map<face_descriptor, size_t>("f:chart").first;
+	fChartMap = *mesh->property_map<face_descriptor, size_t>("f:chart");
 	vCornerMap = mesh->add_property_map<vertex_descriptor, bool>("v:corner", false).first;
 	for (auto vertex : mesh->vertices())
 	{
@@ -29,7 +29,7 @@ Mesh RemeshManager::Run(std::string outputPath)
 	{
 		boost::filesystem::create_directories(outputPath);
 	}
-	auto fColorMap = mesh->property_map<face_descriptor, CGAL::Color>("f:color").first;
+	auto fColorMap = *mesh->property_map<face_descriptor, CGAL::Color>("f:color");
 	CGAL::IO::write_PLY(outputPath + "RemeshClassifyMesh.ply", *mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 
 	for (const auto& pair : partitionMap)
@@ -202,8 +202,8 @@ Mesh RemeshManager::Run(std::string outputPath)
 
 RemeshPartition::RemeshPartition(size_t inId, RemeshManager* inRemeshManager, const std::set<face_descriptor>& inFaces) : id(inId), remeshManager(inRemeshManager), mesh(inRemeshManager->mesh), faces(inFaces)
 {
-	auto fNormalMap = mesh->property_map<face_descriptor, Vector_3>("f:normal").first;
-	auto fColorMap = mesh->property_map <face_descriptor, CGAL::Color>("f:color").first;
+	auto fNormalMap = *mesh->property_map<face_descriptor, Vector_3>("f:normal");
+	auto fColorMap = *mesh->property_map <face_descriptor, CGAL::Color>("f:color");
 	Vector_3 checkNormal(0.0, 0.0, 0.0);
 	std::vector<halfedge_descriptor> boundaryHalfedges;
 	for (const auto& f : faces)
@@ -287,47 +287,75 @@ RemeshPartition::RemeshPartition(size_t inId, RemeshManager* inRemeshManager, co
 
 std::vector<std::vector<halfedge_descriptor>> RemeshPartition::ExtractBoundaries(const halfedge_descriptor& startHalfedge, std::map<vertex_descriptor, std::set<halfedge_descriptor>>& sourceHalfdegesMap)
 {
-	size_t maxLoop = sourceHalfdegesMap.size() * 2;
 	std::vector<std::vector<halfedge_descriptor>> boundaries;
-	vertex_descriptor startVertex = mesh->source(startHalfedge);
-	halfedge_descriptor currentHalfedge = startHalfedge;
-	std::vector<halfedge_descriptor> boundary;
-	size_t loopNum = 0;
-	while (true)
-	{
-		loopNum++;
-		if (loopNum > maxLoop)
-		{
-			std::cerr << "Border search error!" << std::endl;
-			break;
-		}
-		boundary.push_back(currentHalfedge);
-		vertex_descriptor targetVertex = mesh->target(currentHalfedge);
-		if (targetVertex == startVertex)
-		{
-			break;
-		}
-		const auto& halfedges = sourceHalfdegesMap[targetVertex];
-		if (halfedges.size() != 1)
-		{
-			// Prevent self-intersecting polygons
-			boundary.clear();
-			for (const auto& halfedge : halfedges)
-			{
-				auto currentBoundaries = ExtractBoundaries(halfedge, sourceHalfdegesMap);
-				boundaries.insert(boundaries.end(), currentBoundaries.begin(), currentBoundaries.end());
+
+	struct StackItem {
+		halfedge_descriptor halfedge;
+		vertex_descriptor startVertex;
+		std::vector<halfedge_descriptor> path;
+		size_t loopCount;
+	};
+
+	size_t maxLoop = sourceHalfdegesMap.size() * 10;
+	std::stack<StackItem> stack;
+	stack.push({ startHalfedge, mesh->source(startHalfedge), {}, 0 });
+
+	while (!stack.empty()) {
+		StackItem item = stack.top();
+		stack.pop();
+
+		halfedge_descriptor current = item.halfedge;
+		vertex_descriptor startVertex = item.startVertex;
+		std::vector<halfedge_descriptor> boundary = item.path;
+		size_t loopNum = item.loopCount;
+
+		while (true) {
+			loopNum++;
+			if (loopNum > maxLoop) {
+				std::cerr << "Border search error: exceeded maxLoop!" << std::endl;
+				boundary.clear();
+				break;
 			}
-			break;
+
+			if (!mesh->is_valid(current)) {
+				std::cerr << "Encountered invalid halfedge!" << std::endl;
+				boundary.clear();
+				break;
+			}
+
+			boundary.push_back(current);
+			vertex_descriptor targetVertex = mesh->target(current);
+			if (targetVertex == startVertex) {
+				break; // 完成一条边界
+			}
+
+			auto it = sourceHalfdegesMap.find(targetVertex);
+			if (it == sourceHalfdegesMap.end()) {
+				std::cerr << "No outgoing halfedges for vertex!" << std::endl;
+				boundary.clear();
+				break;
+			}
+
+			const auto& halfedges = it->second;
+			if (halfedges.size() != 1) {
+				// 多条分支，压入栈继续处理
+				for (const auto& he : halfedges) {
+					if (!mesh->is_valid(he)) continue;
+					stack.push({ he, targetVertex, boundary, loopNum });
+				}
+				boundary.clear();
+				break;
+			}
+			else {
+				current = *halfedges.begin();
+			}
 		}
-		else
-		{
-			currentHalfedge = *halfedges.begin();
+
+		if (!boundary.empty()) {
+			boundaries.push_back(boundary);
 		}
 	}
-	if (!boundary.empty())
-	{
-		boundaries.push_back(boundary);
-	}
+
 	return boundaries;
 }
 

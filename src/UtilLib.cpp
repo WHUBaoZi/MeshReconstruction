@@ -2,11 +2,16 @@
 
 void UtilLib::FilterMesh(Mesh& mesh, int iterCount)
 {
-	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
-	if (!fNormalMap)
+	auto fNormalMapOpt = mesh.property_map<face_descriptor, Vector_3>("f:normal");
+	Mesh::Property_map<face_descriptor, Vector_3> fNormalMap;
+	if (!fNormalMapOpt)
 	{
 		fNormalMap = mesh.add_property_map<face_descriptor, Vector_3>("f:normal").first;
 		CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
+	}
+	else
+	{
+		fNormalMap = *fNormalMapOpt;
 	}
 
 	// 设置距离权重公式的σ,角度权重公式的θ
@@ -201,7 +206,7 @@ CGAL::Color UtilLib::GenerateRandomColor()
 
 std::set<size_t> UtilLib::GetPartitionNeighbors(size_t partitionId, const std::map<size_t, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
 {
-	auto fChartMap = mesh.property_map<face_descriptor, size_t>("f:chart").first;
+	auto fChartMap = *mesh.property_map<face_descriptor, size_t>("f:chart");
 	std::set<size_t> neighbors;
 	for (auto face : partitionFacesMap.at(partitionId))
 	{
@@ -221,7 +226,7 @@ std::set<size_t> UtilLib::GetPartitionNeighbors(size_t partitionId, const std::m
 
 Vector_3 UtilLib::GetPartitionAverageNormal(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh)
 {
-	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
+	auto fNormalMap = *mesh.property_map<face_descriptor, Vector_3>("f:normal");
 	Vector_3 normal(0.0, 0.0, 0.0);
 	for (const auto& face : partitionFacesMap.at(partitionId))
 	{
@@ -370,21 +375,36 @@ halfedge_descriptor UtilLib::GetHalfedge(vertex_descriptor source, vertex_descri
 
 std::map<size_t, std::set<face_descriptor>> UtilLib::PartitionByNormal(Mesh& mesh, double threshold, double thresholdAngle)
 {
-	auto fNormalMap = mesh.property_map<face_descriptor, Vector_3>("f:normal").first;
-	if (!fNormalMap)
+	auto fNormalMapOpt = mesh.property_map<face_descriptor, Vector_3>("f:normal");
+	Mesh::Property_map<face_descriptor, Vector_3> fNormalMap;
+	if (!fNormalMapOpt) 
 	{
 		fNormalMap = mesh.add_property_map<face_descriptor, Vector_3>("f:normal", CGAL::NULL_VECTOR).first;
 		CGAL::Polygon_mesh_processing::compute_face_normals(mesh, fNormalMap);
 	}
-	auto fChartMap = mesh.property_map<face_descriptor, size_t>("f:chart").first;
-	if (!fChartMap)
+	else
+	{
+		fNormalMap = *fNormalMapOpt;
+	}
+	auto fChartMapOpt = mesh.property_map<face_descriptor, size_t>("f:chart");
+	Mesh::Property_map<face_descriptor, size_t> fChartMap;
+	if (!fChartMapOpt)
 	{
 		fChartMap = mesh.add_property_map<face_descriptor, size_t>("f:chart", size_t(-1)).first;
 	}
-	auto fColorMap = mesh.property_map<face_descriptor, CGAL::Color>("f:color").first;
-	if (!fColorMap)
+	else
+	{
+		fChartMap = *fChartMapOpt;
+	}
+	auto fColorMapOpt = mesh.property_map<face_descriptor, CGAL::Color>("f:color");
+	Mesh::Property_map<face_descriptor, CGAL::Color> fColorMap;
+	if (!fColorMapOpt)
 	{
 		fColorMap = mesh.add_property_map<face_descriptor, CGAL::Color>("f:color", CGAL::Color(0, 0, 0)).first;
+	}
+	else
+	{
+		fColorMap = *fColorMapOpt;
 	}
 
 	std::map<size_t, std::set<face_descriptor>> partitionsMap;

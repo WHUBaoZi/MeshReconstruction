@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
 	}
 	PartitionManager partitionManager(&mesh);
 	partitionManager.RunSegmentation();
-	auto fColorMap = mesh.property_map<face_descriptor, CGAL::Color>("f:color").first;
+	auto fColorMap = *mesh.property_map<face_descriptor, CGAL::Color>("f:color");
 	CGAL::IO::write_PLY(outputPath + fileName + "/" + fileName + "_PartitionMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
 	end = std::chrono::high_resolution_clock::now();

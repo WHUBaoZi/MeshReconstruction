@@ -42,7 +42,7 @@ Partition::Partition(int partitionIndex, PartitionManager* partitionManager, Mes
 
 void Partition::CalculateAverageNormal()
 {
-	auto fNormalMap = mesh->property_map<face_descriptor, Vector_3>("f:normal").first;
+	auto fNormalMap = *mesh->property_map<face_descriptor, Vector_3>("f:normal");
 	for (const auto& face : faces)
 	{
 		facesAverageNormal += fNormalMap[face];
@@ -52,7 +52,7 @@ void Partition::CalculateAverageNormal()
 
 void Partition::CalculateBorderPoints()
 {
-	auto fChartMap = mesh->property_map<face_descriptor, int>("f:chart").first;
+	auto fChartMap = *mesh->property_map<face_descriptor, int>("f:chart");
 	for (const auto& face : faces)
 	{
 		for (const auto& halfedge : CGAL::halfedges_around_face(mesh->halfedge(face), *mesh))
