@@ -1,3 +1,5 @@
+#pragma once
+
 #include <omp.h>
 //#include <Python.h>
 
@@ -14,7 +16,7 @@ int main(int argc, char* argv[])
 	std::vector<std::pair<std::string, long long>> timings;
 
 #pragma region Input mesh file & Centralize Mesh
-	std::string inputFile = "../Data/TestData/test4_HoleFill.obj";
+	std::string inputFile = "../Data/TestData/test6_HoleFill.obj";
 	std::string outputPath = "../Data/Output/";
 	std::string fileName = "";
 	if (argc > 1)
@@ -52,8 +54,7 @@ int main(int argc, char* argv[])
 	{
 		boost::filesystem::create_directories(outputPath + fileName + "/");
 	}
-	PartitionManager partitionManager(&mesh);
-	partitionManager.RunSegmentation();
+	auto partitions = PartitionFunctions::PartitionByPlanarity(mesh);
 	auto fColorMap = *mesh.property_map<face_descriptor, CGAL::Color>("f:color");
 	CGAL::IO::write_PLY(outputPath + fileName + "/" + fileName + "_PartitionMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
@@ -65,30 +66,7 @@ int main(int argc, char* argv[])
 #pragma region Optimize
 	std::cout << "Start partition optimize..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
-	float areaTolerancePercent = 0.005;
-	double totalArea = 0.0;
-	std::vector<int> partitionIndices;
-	for (const auto& pair : partitionManager.partitionMap)
-	{
-		partitionIndices.emplace_back(pair.first);
-		totalArea += pair.second->area;
-	}
-	float toleranceArea = totalArea * areaTolerancePercent;
-	std::sort(partitionIndices.begin(), partitionIndices.end(), [&](int a, int b) {return partitionManager.partitionMap[a]->area > partitionManager.partitionMap[b]->area; });
-	int num = 0;
-	for (size_t i = 0; i < partitionIndices.size(); i++)
-	{
-		auto& partition = partitionManager.partitionMap[i];
-		if (partition->area < toleranceArea)
-		{
-			partition->bIsValid = false;
-		}
-		else
-		{
-			num++;
-		}
-	}
-	partitionManager.ReconstructPartitionMesh();
+	auto optimizedPartitions = PartitionFunctions::FilterByAreaThreshold(mesh, partitions);
 	end = std::chrono::high_resolution_clock::now();
 	timings.emplace_back(std::make_pair("Partition optimize", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
 	std::cout << "Partition optimize finished. Time taken: " << timings[0].second << " seconds" << std::endl;
@@ -97,15 +75,19 @@ int main(int argc, char* argv[])
 #pragma region Polyhedron Segmentation
 	std::cout << "Start Polyhedron Segmentation..." << std::endl;
 	start = std::chrono::high_resolution_clock::now();
-	PolyhedronSegmentation polyhedronSegmentation(&partitionManager, &mesh);
-	Mesh voxelMesh = polyhedronSegmentation.Run(outputPath + fileName + "/PolyhedronSegmentation/");
+	PolyhedronSegmentationFunctions::outputPath = outputPath + fileName + "/PolyhedronSegmentation/";
+	Mesh segMesh = PolyhedronSegmentationFunctions::DoSegmentation(mesh, optimizedPartitions);
 	end = std::chrono::high_resolution_clock::now();
 	timings.emplace_back(std::make_pair("Polyhedron Segmentation", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
 	std::cout << "Polyhedron Segmentation finished. Time taken: " << timings[2].second << " seconds" << std::endl;
 #pragma endregion
 
-	RemeshManager remeshManager(&voxelMesh);
-	remeshManager.Run(outputPath + fileName + "/Remesh/");
+	auto partitionResult = PartitionFunctions::PartitionByNormal(segMesh);
+	auto refineResult = PartitionFunctions::RefineByAreaThreshold(segMesh, partitionResult, 0.00005);
+	Remesh::DoRemesh(segMesh, refineResult);
+
+	//RemeshManager remeshManager(&voxelMesh);
+	//remeshManager.Run(outputPath + fileName + "/Remesh/");
 
 	std::cout << "All Done" << std::endl;
 }

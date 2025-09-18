@@ -30,17 +30,15 @@ namespace UtilLib
 
 	Point_3 GetFaceCenter(const face_descriptor& face, const Mesh& mesh);
 
-	std::set<face_descriptor> GetKRingFaces(const face_descriptor& face, int kRing, const Mesh& mesh);	// Contain self; Only for Triangle Face
+	std::unordered_set<face_descriptor> GetKRingFaces(const face_descriptor& face, int kRing, const Mesh& mesh);	// Contain self; Only for Triangle Face
 
 	std::set<vertex_descriptor> GetKRingVertices(const vertex_descriptor& vertex, int kRing, const Mesh& mesh);	// Contain self
 
 	std::vector<vertex_descriptor> GetFaceVertices(const CGAL::SM_Face_index& face, const Mesh& mesh);
 
-	Plane_3 FitPlaneFromFaces(const std::set<face_descriptor> faces, const Mesh& mesh);
+	Plane_3 FitPlaneFromFaces(const std::unordered_set<face_descriptor>& faces, const Mesh& mesh);
 
 	CGAL::Color GenerateRandomColor();
-
-	std::set<size_t> GetPartitionNeighbors(size_t partitionId, const std::map<size_t, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
 
 	Vector_3 GetPartitionAverageNormal(int partitionId, const std::map<int, std::set<face_descriptor>>& partitionFacesMap, const Mesh& mesh);
 
@@ -56,7 +54,7 @@ namespace UtilLib
 
 	halfedge_descriptor GetHalfedge(vertex_descriptor source, vertex_descriptor target, const Mesh& mesh);
 
-	std::map<size_t, std::set<face_descriptor>> PartitionByNormal(Mesh& mesh, double threshold = 0.001, double thresholdAngle = 15);
+	/*std::map<int, std::set<face_descriptor>> PartitionByNormal(Mesh& mesh, double threshold = 0.001, double thresholdAngle = 15);*/
 
 	Mesh ConstructWirframeMesh(const std::map<size_t, std::vector<vertex_descriptor>>& boundaryMap, const Mesh& baseMesh);
 
@@ -67,6 +65,12 @@ namespace UtilLib
 	double EdgeLength(halfedge_descriptor h, const Mesh& mesh);
 
 	void FillHoles(Mesh& mesh);
+
+	std::vector<std::vector<vertex_descriptor>> ExtractBoundaries(Mesh& mesh, const std::unordered_set<face_descriptor>& faces);
+
+	std::vector<std::vector<vertex_descriptor>> ExtractCornerBoundaries(Mesh& mesh, const std::unordered_set<face_descriptor>& faces);
+
+	Mesh CreateWireframeMesh(const std::unordered_map<int, std::vector<std::vector<vertex_descriptor>>>& BoundariesMap, const Mesh& mesh);
 
 	inline Plane_3 ReversePlane(const Plane_3& plane) { return Plane_3(-plane.a(), -plane.b(), -plane.c(), -plane.d()); }
 
