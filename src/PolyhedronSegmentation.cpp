@@ -330,7 +330,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		const auto& ds = seg.dividingSurfaces[partitionID];
 
 		Mesh planeMesh = UtilLib::CreatePlaneMesh(ds.plane, ds.centerPoint);
-		CGAL::IO::write_OBJ(outputPath + "ClipPartitions/ClipPartition_" + std::to_string(partitionID) + ".obj", planeMesh);
+		//CGAL::IO::write_OBJ(outputPath + "ClipPartitions/ClipPartition_" + std::to_string(partitionID) + ".obj", planeMesh);
 	}
 	#pragma endregion
 
@@ -356,8 +356,8 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		int dividingSurfaceID = *polyhedron.dividingSurfaces.begin();
 		const DividingSurface& dividingSurface = seg.dividingSurfaces[dividingSurfaceID];
 		const Plane_3& dividingPlane = dividingSurface.plane;
-		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Polyhedron.obj", polyhedron.polyhedronMesh);
-		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_ClipPartition_" + std::to_string(dividingSurface.partitionID) + ".obj", UtilLib::CreatePlaneMesh(dividingSurface.plane, dividingSurface.centerPoint));
+		//CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Polyhedron.obj", polyhedron.polyhedronMesh);
+		//CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_ClipPartition_" + std::to_string(dividingSurface.partitionID) + ".obj", UtilLib::CreatePlaneMesh(dividingSurface.plane, dividingSurface.centerPoint));
 		bool bSelfIntersect = CGAL::Polygon_mesh_processing::does_self_intersect(polyhedron.polyhedronMesh);	// Check intersect
 		Mesh belowMesh, aboveMesh;
 		CGAL::copy_face_graph(polyhedron.polyhedronMesh, belowMesh);
@@ -368,8 +368,8 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		parentDividingSurfaces.erase(dividingSurfaceID);
 		int belowPolyhedronID = seg.CreatePolyhedron(belowMesh, parentDividingSurfaces);
 		const PolyhedronFromPartition& belowPolyhedron = seg.polyhedrons[belowPolyhedronID];
-		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Below.obj", belowMesh);
-		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Below_Remeshed.obj", belowPolyhedron.polyhedronMesh);
+		//CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Below.obj", belowMesh);
+		//CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Below_Remeshed.obj", belowPolyhedron.polyhedronMesh);
 		if (belowPolyhedron.dividingSurfaces.empty())
 		{
 			indivisiblePolyhedrons.push_back(belowPolyhedronID);
@@ -380,8 +380,8 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		}
 		int abovePolyhedronID = seg.CreatePolyhedron(aboveMesh, parentDividingSurfaces);
 		const PolyhedronFromPartition& abovePolyhedron = seg.polyhedrons[abovePolyhedronID];
-		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Above.obj", aboveMesh);
-		CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Above_Remeshed.obj", abovePolyhedron.polyhedronMesh);
+		//CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Above.obj", aboveMesh);
+		//CGAL::IO::write_OBJ(outputPath + std::to_string(loopNum) + "_Above_Remeshed.obj", abovePolyhedron.polyhedronMesh);
 		if (abovePolyhedron.dividingSurfaces.empty())
 		{
 			indivisiblePolyhedrons.push_back(abovePolyhedronID);
@@ -407,7 +407,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 	);
 
 	Mesh testVolumeMesh = Voxel::volumeToMesh(meshGrid);
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "originalVolumeMesh.obj", testVolumeMesh);
+	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "originalVolumeMesh.obj", testVolumeMesh);
 
 	std::vector<int> usefulPolyhedrons;
 	for (int i = 0; i < indivisiblePolyhedrons.size(); i++)
@@ -424,34 +424,34 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		);
 		openvdb::FloatGrid::Ptr intersectionGrid = openvdb::tools::csgIntersectionCopy(*polyhedronGrid, *meshGrid);
 
-		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "PolyhedronMesh.obj", polyhedron.polyhedronMesh);
+		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "PolyhedronMesh.obj", polyhedron.polyhedronMesh);
 		Mesh volumePolyhedronMesh = Voxel::volumeToMesh(polyhedronGrid);
-		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "VolumePolyhedronMesh.obj", volumePolyhedronMesh);
+		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "VolumePolyhedronMesh.obj", volumePolyhedronMesh);
 		Mesh intersectionPolyhedronMesh = Voxel::volumeToMesh(intersectionGrid);
-		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "IntersectionPolyhedronMesh.obj", intersectionPolyhedronMesh);
+		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "IntersectionPolyhedronMesh.obj", intersectionPolyhedronMesh);
 
 		if (!intersectionGrid || intersectionGrid->empty())
 		{
-			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+			//CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
 			continue;
 		}
 		size_t polyhedronVoxelCount = Voxel::countInteriorVoxels(polyhedronGrid);
 		if (polyhedronVoxelCount == 0)
 		{
 			std::cout << "Voxel error" << std::endl;
-			CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ErrorPolyhedronMesh_" + std::to_string(i) + ".obj", polyhedron.polyhedronMesh);
+			//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ErrorPolyhedronMesh_" + std::to_string(i) + ".obj", polyhedron.polyhedronMesh);
 		}
 		size_t intersectionVoxelCount = Voxel::countInteriorVoxels(intersectionGrid);
 
 		double ratio = static_cast<float>(intersectionVoxelCount) / polyhedronVoxelCount;
 		if (ratio > 0.7)
 		{
-			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+			//CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
 			usefulPolyhedrons.push_back(polyhedronID);
 		}
 		else
 		{
-			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+			//CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
 		}
 	}
 
@@ -482,7 +482,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 			mergedMesh.add_face(newFace);
 		}
 	}
-	CGAL::IO::write_OBJ(outputPath + "../MergedMesh.obj", mergedMesh);
+	//CGAL::IO::write_OBJ(outputPath + "../MergedMesh.obj", mergedMesh);
 
 	// Merge polyhedrons
 	#pragma region Merge polyhedrons
@@ -500,9 +500,9 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		);
 		Mesh voxelMesh = Voxel::volumeToMesh(sdfGrid);
 		size_t removed = CGAL::Polygon_mesh_processing::keep_largest_connected_components(voxelMesh, 1);
-		CGAL::IO::write_OBJ(outputPath + "../VoxelMesh.obj", voxelMesh);
+		//CGAL::IO::write_OBJ(outputPath + "../VoxelMesh.obj", voxelMesh);
 		CGAL::Polygon_mesh_processing::triangulate_faces(voxelMesh);
-		CGAL::IO::write_OBJ(outputPath + "../VoxelMesh_Triangulate.obj", voxelMesh);
+		//CGAL::IO::write_OBJ(outputPath + "../VoxelMesh_Triangulate.obj", voxelMesh);
 	}
 	else
 	{
@@ -526,7 +526,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		std::string inputMeshPath = outputPath + "../ExtendedMarchingCubeMesh.off";
 		std::string outputMeshPath = outputPath + "../ExtendedMarchingCubeMesh_fixed.off";
 		std::string cmd = "MeshFix.exe \"" + inputMeshPath + "\" \"" + outputMeshPath + "\"";
-		CGAL::IO::write_OFF(inputMeshPath, voxelMesh);
+		//CGAL::IO::write_OFF(inputMeshPath, voxelMesh);
 
 
 		char cmdLine[1024];
@@ -589,8 +589,8 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		auto& polyhedron = polyhedrons[index];
 		int planeIndex = polyhedron.planeIndices[0];
 		const auto& plane = planes[planeIndex];
-		CGAL::IO::write_OBJ(outputPath + std::to_string(index) + "_Polyhedron.obj", polyhedron.polyhedronMesh);
-		CGAL::IO::write_OBJ(outputPath + std::to_string(index) + "_ClipPartition_" + std::to_string(planeIndex) + ".obj", UtilLib::CreatePlaneMesh(plane, CGAL::Polygon_mesh_processing::centroid(polyhedron.polyhedronMesh)));
+		//CGAL::IO::write_OBJ(outputPath + std::to_string(index) + "_Polyhedron.obj", polyhedron.polyhedronMesh);
+		//CGAL::IO::write_OBJ(outputPath + std::to_string(index) + "_ClipPartition_" + std::to_string(planeIndex) + ".obj", UtilLib::CreatePlaneMesh(plane, CGAL::Polygon_mesh_processing::centroid(polyhedron.polyhedronMesh)));
 		bool bSelfIntersect = CGAL::Polygon_mesh_processing::does_self_intersect(polyhedron.polyhedronMesh);	// Check intersect
 		Mesh belowMesh, aboveMesh;
 		CGAL::copy_face_graph(polyhedron.polyhedronMesh, belowMesh);
@@ -623,7 +623,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 	);
 
 	Mesh testVolumeMesh = Voxel::volumeToMesh(meshGrid);
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "originalVolumeMesh.obj", testVolumeMesh);
+	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "originalVolumeMesh.obj", testVolumeMesh);
 
 	std::vector<int> usefulPolyhedrons;
 	for (int i = 0; i < indivisiblePolyhedrons.size(); i++)
@@ -640,34 +640,34 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		);
 		openvdb::FloatGrid::Ptr intersectionGrid = openvdb::tools::csgIntersectionCopy(*polyhedronGrid, *meshGrid);
 
-		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "PolyhedronMesh.obj", polyhedron.polyhedronMesh);
+		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "PolyhedronMesh.obj", polyhedron.polyhedronMesh);
 		Mesh volumePolyhedronMesh = Voxel::volumeToMesh(polyhedronGrid);
-		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "VolumePolyhedronMesh.obj", volumePolyhedronMesh);
+		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "VolumePolyhedronMesh.obj", volumePolyhedronMesh);
 		Mesh intersectionPolyhedronMesh = Voxel::volumeToMesh(intersectionGrid);
-		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "IntersectionPolyhedronMesh.obj", intersectionPolyhedronMesh);
+		//::IO::write_OBJ(TEST_OUTPUT_PATH + "IntersectionPolyhedronMesh.obj", intersectionPolyhedronMesh);
 
 		if (!intersectionGrid || intersectionGrid->empty())
 		{
-			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+			//::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
 			continue;
 		}
 		size_t polyhedronVoxelCount = Voxel::countInteriorVoxels(polyhedronGrid);
 		if (polyhedronVoxelCount == 0)
 		{
 			std::cout << "Voxel error" << std::endl;
-			CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ErrorPolyhedronMesh_" + std::to_string(i) + ".obj", polyhedron.polyhedronMesh);
+			//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ErrorPolyhedronMesh_" + std::to_string(i) + ".obj", polyhedron.polyhedronMesh);
 		}
 		size_t intersectionVoxelCount = Voxel::countInteriorVoxels(intersectionGrid);
 
 		double ratio = static_cast<float>(intersectionVoxelCount) / polyhedronVoxelCount;
 		if (ratio > 0.7)
 		{
-			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+			//CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
 			usefulPolyhedrons.push_back(index);
 		}
 		else
 		{
-			CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+			//CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
 		}
 	}
 
@@ -698,7 +698,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 			mergedMesh.add_face(newFace);
 		}
 	}
-	CGAL::IO::write_OBJ(outputPath + "../MergedMesh.obj", mergedMesh);
+	//CGAL::IO::write_OBJ(outputPath + "../MergedMesh.obj", mergedMesh);
 
 	// Merge polyhedrons
 #pragma region Merge polyhedrons
@@ -716,9 +716,9 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		);
 		Mesh voxelMesh = Voxel::volumeToMesh(sdfGrid);
 		size_t removed = CGAL::Polygon_mesh_processing::keep_largest_connected_components(voxelMesh, 1);
-		CGAL::IO::write_OBJ(outputPath + "../VoxelMesh.obj", voxelMesh);
+		//CGAL::IO::write_OBJ(outputPath + "../VoxelMesh.obj", voxelMesh);
 		CGAL::Polygon_mesh_processing::triangulate_faces(voxelMesh);
-		CGAL::IO::write_OBJ(outputPath + "../VoxelMesh_Triangulate.obj", voxelMesh);
+		//CGAL::IO::write_OBJ(outputPath + "../VoxelMesh_Triangulate.obj", voxelMesh);
 		return voxelMesh;
 	}
 	else
@@ -741,7 +741,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		std::string inputMeshPath = outputPath + "../ExtendedMarchingCubeMesh.off";
 		std::string outputMeshPath = outputPath + "../ExtendedMarchingCubeMesh_fixed.off";
 		std::string cmd = "MeshFix.exe \"" + inputMeshPath + "\" \"" + outputMeshPath + "\"";
-		CGAL::IO::write_OFF(inputMeshPath, voxelMesh);
+		//CGAL::IO::write_OFF(inputMeshPath, voxelMesh);
 
 
 		char cmdLine[1024];

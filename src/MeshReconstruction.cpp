@@ -7,8 +7,7 @@
 #include "PolyhedronSegmentation.h"
 #include "UtilLib.h"
 
-
-Mesh MeshReconstruction::DoReconstruction(CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3>& mesh)
+CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3> MeshReconstruction::DoReconstruction(CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3>& mesh)
 {
 	UtilLib::CentralizeMesh(mesh);
 

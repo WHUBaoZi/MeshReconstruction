@@ -10,7 +10,7 @@ std::vector<RansacPlane> Ransac::RansacPlanes(const Mesh& mesh, std::vector<std:
 std::vector<RansacPlane> Ransac::RansacPlanes(const std::vector<Point_3>& points, std::vector<std::vector<Point_3>>& planePoints)
 {
 	planePoints.clear();
-	CGAL::IO::write_points(TEST_OUTPUT_PATH + "RANSAC_Test/Points.ply", points);
+	//CGAL::IO::write_points(TEST_OUTPUT_PATH + "RANSAC_Test/Points.ply", points);
 	Pwn_vector pwn;
 	pwn.reserve(points.size());
 	for (const auto& p : points)
@@ -52,15 +52,15 @@ std::vector<RansacPlane> Ransac::RansacPlanes(const std::vector<Point_3>& points
 		Point_3 center = CGAL::ORIGIN + (sum / indices.size());
 		Plane_3 plane = ransacPlane;
 		UtilLib::CreatePlaneMesh(plane, center, planeMesh);
-		CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RANSAC_Test/PlaneMesh_" + std::to_string(i) + ".obj", planeMesh);
-		CGAL::IO::write_points(TEST_OUTPUT_PATH + "RANSAC_Test/PointsMesh_" + std::to_string(i) + ".ply", planePoints[i]);
+		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RANSAC_Test/PlaneMesh_" + std::to_string(i) + ".obj", planeMesh);
+		//CGAL::IO::write_points(TEST_OUTPUT_PATH + "RANSAC_Test/PointsMesh_" + std::to_string(i) + ".ply", planePoints[i]);
 	}
 	
-	auto unassigned = ransac.indices_of_unassigned_points();
-	std::vector<Point_3> leftover_points;
-	for (auto idx : unassigned)
-	{
-		leftover_points.push_back(pwn[idx].first);
-	}
+	//auto unassigned = ransac.indices_of_unassigned_points();
+	//std::vector<Point_3> leftover_points;
+	//for (auto idx : unassigned)
+	//{
+	//	leftover_points.push_back(pwn[idx].first);
+	//}
 	return ransacPlanes;
 }

@@ -460,7 +460,7 @@ std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionFunctions:
 		currenId++;
 		currentColor = UtilLib::GenerateRandomColor();
 	}
-	CGAL::IO::write_PLY(TEST_OUTPUT_PATH + "OriginalClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+	//CGAL::IO::write_PLY(TEST_OUTPUT_PATH + "OriginalClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 	return partitions;
 }
 
@@ -472,7 +472,7 @@ std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionFunctions:
 	using Region_growing = CGAL::Shape_detection::Region_growing<Neighbor_query, Region_type>;
 
 	CGAL::Polygon_mesh_processing::isotropic_remeshing(faces(mesh), 0.5, mesh);
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RegionGrowingTest/IsotropicRemeshing.obj", mesh);
+	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RegionGrowingTest/IsotropicRemeshing.obj", mesh);
 
 	Neighbor_query neighbor_query(mesh);
 	Region_type region_type(mesh, CGAL::parameters::maximum_distance(maxDistance).maximum_angle(maxAngle).minimum_region_size(minRegionSize));
@@ -497,7 +497,7 @@ std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionFunctions:
 			fColorMap[f] = color;
 		}
 	}
-	CGAL::IO::write_PLY(TEST_OUTPUT_PATH + "RegionGrowingTest/RegionGrowingClassifyMesh_BeforeMerge.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+	//CGAL::IO::write_PLY(TEST_OUTPUT_PATH + "RegionGrowingTest/RegionGrowingClassifyMesh_BeforeMerge.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 
 	std::vector<Region_growing::Item> unassigned;
 	region_growing.unassigned_items(faces(mesh), std::back_inserter(unassigned));

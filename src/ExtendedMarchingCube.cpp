@@ -72,7 +72,7 @@ Mesh ExtendedMarchingCube::ApplyExtendedMarchingCube(openvdb::FloatGrid::Ptr gri
 		Point_3 p(op.x(), op.y(), op.z());
 		gridMesh.add_vertex(p);
 	}
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "GridMesh.obj", gridMesh);
+	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "GridMesh.obj", gridMesh);
 
 	std::vector<openvdb::Vec3f> vertices;
 	std::unordered_set<int> features;
@@ -371,7 +371,7 @@ Mesh ExtendedMarchingCube::ApplyExtendedMarchingCube(openvdb::FloatGrid::Ptr gri
 		}
 	}
 
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh_BeforeFlip.obj", marchingCubesTestMesh);
+	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh_BeforeFlip.obj", marchingCubesTestMesh);
 	// Flip edges
 	for (auto edge : marchingCubesTestMesh.edges())
 	{
@@ -394,7 +394,7 @@ Mesh ExtendedMarchingCube::ApplyExtendedMarchingCube(openvdb::FloatGrid::Ptr gri
 			CGAL::Euler::flip_edge(h1, marchingCubesTestMesh);
 		}
 	}
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh.obj", marchingCubesTestMesh);
+	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh.obj", marchingCubesTestMesh);
 
 	CGAL::Polygon_mesh_processing::stitch_borders(marchingCubesTestMesh);
 	std::vector<std::pair<face_descriptor, face_descriptor>> intersectedTris;
@@ -405,6 +405,6 @@ Mesh ExtendedMarchingCube::ApplyExtendedMarchingCube(openvdb::FloatGrid::Ptr gri
 		marchingCubesTestMesh.remove_face(p.second);
 	}
 	CGAL::Polygon_mesh_processing::remove_isolated_vertices(marchingCubesTestMesh);
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh_RemoveIntersections.obj", marchingCubesTestMesh);
+	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ExtendedMarchingCubesTestMesh_RemoveIntersections.obj", marchingCubesTestMesh);
 	return marchingCubesTestMesh;
 }

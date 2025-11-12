@@ -421,6 +421,6 @@ Mesh Remesh::DoRemesh(Mesh& mesh, const std::unordered_map<int, std::unordered_s
 			}
 		}
 	}
-	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RemeshTest.obj", remeshedMesh);
+	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RemeshTest.obj", remeshedMesh);
 	return remeshedMesh;
 }
