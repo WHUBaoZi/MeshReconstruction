@@ -379,7 +379,7 @@ Mesh Remesh::DoRemesh(Mesh& mesh, const std::unordered_map<int, std::unordered_s
 
 	Mesh wireframeMesh = UtilLib::CreateWireframeMesh(cornerBoundariesMap, mesh);
 	
-	//UtilLib::WriteWireframeOBJ(outputPath + "WireframeOBJ.obj", wireframeMesh);
+	UtilLib::WriteWireframeOBJ(TEST_OUTPUT_PATH + "WireframeOBJ.obj", wireframeMesh);
 	//UtilLib::WriteWireframeOBJ(outputPath + "OriginWireframeOBJ.obj", originalWireframeMesh);
 
 	std::map<vertex_descriptor, vertex_descriptor> v2v;
@@ -421,6 +421,6 @@ Mesh Remesh::DoRemesh(Mesh& mesh, const std::unordered_map<int, std::unordered_s
 			}
 		}
 	}
-
+	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RemeshTest.obj", remeshedMesh);
 	return remeshedMesh;
 }

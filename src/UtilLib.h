@@ -56,7 +56,7 @@ namespace UtilLib
 
 	/*std::map<int, std::set<face_descriptor>> PartitionByNormal(Mesh& mesh, double threshold = 0.001, double thresholdAngle = 15);*/
 
-	Mesh ConstructWirframeMesh(const std::map<size_t, std::vector<vertex_descriptor>>& boundaryMap, const Mesh& baseMesh);
+	Mesh ConstructWireframeMesh(const std::map<size_t, std::vector<vertex_descriptor>>& boundaryMap, const Mesh& baseMesh);
 
 	void BuildLocalBasis(const Vector_3& normal, Vector_3& u, Vector_3& v);
 
@@ -71,6 +71,8 @@ namespace UtilLib
 	std::vector<std::vector<vertex_descriptor>> ExtractCornerBoundaries(Mesh& mesh, const std::unordered_set<face_descriptor>& faces);
 
 	Mesh CreateWireframeMesh(const std::unordered_map<int, std::vector<std::vector<vertex_descriptor>>>& BoundariesMap, const Mesh& mesh);
+
+	bool Intersection(const Mesh& mesh, const Plane_3& plane);
 
 	inline Plane_3 ReversePlane(const Plane_3& plane) { return Plane_3(-plane.a(), -plane.b(), -plane.c(), -plane.d()); }
 

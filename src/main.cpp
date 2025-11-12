@@ -8,6 +8,7 @@
 #include "PolyhedronSegmentation.h"
 #include "Partition.h"
 #include "Remesh.h"
+#include "Ransac.h"
 
 int main(int argc, char* argv[])
 {
@@ -32,6 +33,7 @@ int main(int argc, char* argv[])
 	Mesh mesh;
 	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(inputFile, mesh);
 	UtilLib::CentralizeMesh(mesh);
+	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
 #pragma endregion
 
 	//Mesh testVoxelMesh;
@@ -41,10 +43,40 @@ int main(int argc, char* argv[])
 	//testRemeshManager.Run(outputPath + fileName + "/Remesh/");
 
 
-#pragma region Mesh Partition
-	std::cout << "Start Mesh partition..." << std::endl;
-	start = std::chrono::high_resolution_clock::now();
-	//auto partitionFacesMap = MeshPartition(mesh);
+//#pragma region Mesh Partition
+//	std::cout << "Start Mesh partition..." << std::endl;
+//	start = std::chrono::high_resolution_clock::now();
+//	//auto partitionFacesMap = MeshPartition(mesh);
+//	// Check Output Path
+//	if (!outputPath.empty() && !boost::filesystem::exists(outputPath))
+//	{
+//		boost::filesystem::create_directories(outputPath);
+//	}
+//	if (!boost::filesystem::exists(outputPath + fileName + "/"))
+//	{
+//		boost::filesystem::create_directories(outputPath + fileName + "/");
+//	}
+//	auto partitions = PartitionFunctions::PartitionByPlanarity(mesh);
+//	auto fColorMap = *mesh.property_map<face_descriptor, CGAL::Color>("f:color");
+//	CGAL::IO::write_PLY(outputPath + fileName + "/" + fileName + "_PartitionMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+//	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
+//	end = std::chrono::high_resolution_clock::now();
+//	timings.emplace_back(std::make_pair("Mesh partition", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+//	std::cout << "Mesh partition finished. Time taken: " << timings[0].second << " seconds" << std::endl;
+//#pragma endregion
+//
+//
+//#pragma region Optimize
+//	std::cout << "Start partition optimize..." << std::endl;
+//	start = std::chrono::high_resolution_clock::now();
+//	auto optimizedPartitions = PartitionFunctions::FilterByAreaThreshold(mesh, partitions);
+//	end = std::chrono::high_resolution_clock::now();
+//	timings.emplace_back(std::make_pair("Partition optimize", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+//	std::cout << "Partition optimize finished. Time taken: " << timings[0].second << " seconds" << std::endl;
+//#pragma endregion
+
+
+#pragma region Ransac
 	// Check Output Path
 	if (!outputPath.empty() && !boost::filesystem::exists(outputPath))
 	{
@@ -54,37 +86,32 @@ int main(int argc, char* argv[])
 	{
 		boost::filesystem::create_directories(outputPath + fileName + "/");
 	}
-	auto partitions = PartitionFunctions::PartitionByPlanarity(mesh);
-	auto fColorMap = *mesh.property_map<face_descriptor, CGAL::Color>("f:color");
-	CGAL::IO::write_PLY(outputPath + fileName + "/" + fileName + "_PartitionMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
-	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
-	end = std::chrono::high_resolution_clock::now();
-	timings.emplace_back(std::make_pair("Mesh partition", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-	std::cout << "Mesh partition finished. Time taken: " << timings[0].second << " seconds" << std::endl;
+
+
+	std::vector<std::vector<Point_3>> planePoints;
+	std::vector<RansacPlane> planes = Ransac::RansacPlanes(mesh, planePoints);
 #pragma endregion
 
-#pragma region Optimize
-	std::cout << "Start partition optimize..." << std::endl;
-	start = std::chrono::high_resolution_clock::now();
-	auto optimizedPartitions = PartitionFunctions::FilterByAreaThreshold(mesh, partitions);
-	end = std::chrono::high_resolution_clock::now();
-	timings.emplace_back(std::make_pair("Partition optimize", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-	std::cout << "Partition optimize finished. Time taken: " << timings[0].second << " seconds" << std::endl;
-#pragma endregion
-
-#pragma region Polyhedron Segmentation
-	std::cout << "Start Polyhedron Segmentation..." << std::endl;
-	start = std::chrono::high_resolution_clock::now();
 	PolyhedronSegmentationFunctions::outputPath = outputPath + fileName + "/PolyhedronSegmentation/";
-	Mesh segMesh = PolyhedronSegmentationFunctions::DoSegmentation(mesh, optimizedPartitions);
-	end = std::chrono::high_resolution_clock::now();
-	timings.emplace_back(std::make_pair("Polyhedron Segmentation", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-	std::cout << "Polyhedron Segmentation finished. Time taken: " << timings[2].second << " seconds" << std::endl;
-#pragma endregion
+	Mesh voxelMesh = PolyhedronSegmentationFunctions::DoSegmentation(mesh, planes, planePoints);
 
-	auto partitionResult = PartitionFunctions::PartitionByNormal(segMesh);
-	auto refineResult = PartitionFunctions::RefineByAreaThreshold(segMesh, partitionResult, 0.00005);
-	Remesh::DoRemesh(segMesh, refineResult);
+	auto partitions = PartitionFunctions::PartitionByRegionGrowing(voxelMesh);
+	Mesh result = Remesh::DoRemesh(voxelMesh, partitions);
+	CGAL::IO::write_OBJ(outputPath + fileName + "/ResultMesh.obj", result);
+
+//#pragma region Polyhedron Segmentation
+//	std::cout << "Start Polyhedron Segmentation..." << std::endl;
+//	start = std::chrono::high_resolution_clock::now();
+//	PolyhedronSegmentationFunctions::outputPath = outputPath + fileName + "/PolyhedronSegmentation/";
+//	Mesh segMesh = PolyhedronSegmentationFunctions::DoSegmentation(mesh, optimizedPartitions);
+//	end = std::chrono::high_resolution_clock::now();
+//	timings.emplace_back(std::make_pair("Polyhedron Segmentation", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
+//	std::cout << "Polyhedron Segmentation finished. Time taken: " << timings[2].second << " seconds" << std::endl;
+//#pragma endregion
+//
+//	auto partitionResult = PartitionFunctions::PartitionByNormal(segMesh);
+//	auto refineResult = PartitionFunctions::RefineByAreaThreshold(segMesh, partitionResult, 0.00005);
+//	Remesh::DoRemesh(segMesh, refineResult);
 
 	//RemeshManager remeshManager(&voxelMesh);
 	//remeshManager.Run(outputPath + fileName + "/Remesh/");

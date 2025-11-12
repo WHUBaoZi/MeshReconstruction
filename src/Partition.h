@@ -10,6 +10,8 @@ namespace PartitionFunctions
 
 	std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionByNormal(Mesh& mesh, double thresholdAngle = 15);
 
+	std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionByRegionGrowing(Mesh& mesh, double maxDistance = 0.3, double maxAngle = 30.0, std::size_t minRegionSize = 10);
+
 	std::unordered_map<int, std::unordered_set<face_descriptor>> FilterByAreaThreshold(Mesh& mesh, const std::unordered_map<int, std::unordered_set<face_descriptor>>& partitions, float areaTolerancePercent = 0.005);
 
 	std::unordered_map<int, std::unordered_set<face_descriptor>> RefineByAreaThreshold(Mesh& mesh, std::unordered_map<int, std::unordered_set<face_descriptor>>& partitions, float areaTolerancePercent);

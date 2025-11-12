@@ -547,7 +547,7 @@ halfedge_descriptor UtilLib::GetHalfedge(vertex_descriptor source, vertex_descri
 //	return partitionsMap;
 //}
 
-Mesh UtilLib::ConstructWirframeMesh(const std::map<size_t, std::vector<vertex_descriptor>>& boundaryMap, const Mesh& baseMesh)
+Mesh UtilLib::ConstructWireframeMesh(const std::map<size_t, std::vector<vertex_descriptor>>& boundaryMap, const Mesh& baseMesh)
 {
 	Mesh wireframeMesh;
 	std::map<vertex_descriptor, vertex_descriptor> v2v;
@@ -704,14 +704,18 @@ std::vector<std::vector<vertex_descriptor>> UtilLib::ExtractCornerBoundaries(Mes
 		for (const auto& vertex : boundary)
 		{
 			halfedge_descriptor h = mesh.halfedge(vertex);
+			std::unordered_set<int> adjacentCharts;
 			for (const auto& face : CGAL::faces_around_target(h, mesh))
 			{
-				if (face == Mesh::null_face())
+				if (face != Mesh::null_face())
 				{
-					cornerBoundary.push_back(vertex);
-					break;
+					adjacentCharts.insert(fChartMap[face]);
 				}
-				if (fChartMap[face] != currentType)
+				else
+				{
+					adjacentCharts.insert(-1);
+				}
+				if (adjacentCharts.size() >= 3)
 				{
 					cornerBoundary.push_back(vertex);
 					break;
@@ -744,5 +748,27 @@ Mesh UtilLib::CreateWireframeMesh(const std::unordered_map<int, std::vector<std:
 		}
 	}
 	return wireframeMesh;
+}
+
+bool UtilLib::Intersection(const Mesh& mesh, const Plane_3& plane)
+{
+	bool has_pos = false;
+	bool has_neg = false;
+	for (auto p : mesh.points())
+	{
+		double signed_distance =
+			plane.a() * p.x() +
+			plane.b() * p.y() +
+			plane.c() * p.z() +
+			plane.d();
+		if (signed_distance > 1e-8)
+			has_pos = true;
+		else if (signed_distance < -1e-8)
+			has_neg = true;
+
+		if (has_pos && has_neg)
+			return true;
+	}
+	return false;
 }
 

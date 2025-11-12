@@ -4,12 +4,15 @@
 #include "UtilLib.h"
 #include "Partition.h"
 #include "Voxel.h"
+#include "Ransac.h"
 
 namespace PolyhedronSegmentationFunctions
 {
 	inline std::string outputPath;
 
 	Mesh DoSegmentation(const Mesh& mesh, const std::unordered_map<int, std::unordered_set<face_descriptor>>& partitions);
+
+	Mesh DoSegmentation(const Mesh& mesh, const std::vector<RansacPlane>& planes, const std::vector<std::vector<Point_3>>& planePoints);
 }
 
 
@@ -29,7 +32,7 @@ public:
 	Mesh planeMesh;
 };
 
-struct Polyhedron
+struct PolyhedronFromPartition
 {
 public:
 	Mesh polyhedronMesh;
@@ -55,6 +58,17 @@ public:
 
 };
 
+struct PolyhedronFromPlane
+{
+public:
+	PolyhedronFromPlane(Mesh inPolyhedronMesh, const std::vector<int> inPlaneIndices, const std::vector<RansacPlane>& planes, const std::vector<std::vector<Point_3>>& planePoints);
+
+public:
+	Mesh polyhedronMesh;
+
+	std::vector<int> planeIndices;
+};
+
 
 class SegmentationManager
 {
@@ -68,7 +82,7 @@ public:
 
 	std::unordered_map<int, DividingSurface> dividingSurfaces;
 
-	std::unordered_map<int, Polyhedron> polyhedrons;
+	std::unordered_map<int, PolyhedronFromPartition> polyhedrons;
 
 public:
 	int CreateDividingSurface(const std::pair<int, std::unordered_set<face_descriptor>>& pair);

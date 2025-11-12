@@ -1,5 +1,9 @@
 #include "Partition.h"
 
+#include <CGAL/Shape_detection/Region_growing/Region_growing.h>
+#include <CGAL/Shape_detection/Region_growing/Polygon_mesh.h>
+#include <CGAL/Polygon_mesh_processing/remesh.h>
+
 //Partition::Partition()
 //{
 //}
@@ -457,6 +461,90 @@ std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionFunctions:
 		currentColor = UtilLib::GenerateRandomColor();
 	}
 	CGAL::IO::write_PLY(TEST_OUTPUT_PATH + "OriginalClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+	return partitions;
+}
+
+std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionFunctions::PartitionByRegionGrowing(Mesh& mesh, double maxDistance, double maxAngle, std::size_t minRegionSize)
+{
+	using Neighbor_query = CGAL::Shape_detection::Polygon_mesh::One_ring_neighbor_query<Mesh>;
+	using Region_type = CGAL::Shape_detection::Polygon_mesh::Least_squares_plane_fit_region<Kernel, Mesh>;
+	using Sorting = CGAL::Shape_detection::Polygon_mesh::Least_squares_plane_fit_sorting<Kernel, Mesh, Neighbor_query>;
+	using Region_growing = CGAL::Shape_detection::Region_growing<Neighbor_query, Region_type>;
+
+	CGAL::Polygon_mesh_processing::isotropic_remeshing(faces(mesh), 0.5, mesh);
+	CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RegionGrowingTest/IsotropicRemeshing.obj", mesh);
+
+	Neighbor_query neighbor_query(mesh);
+	Region_type region_type(mesh, CGAL::parameters::maximum_distance(maxDistance).maximum_angle(maxAngle).minimum_region_size(minRegionSize));
+	Sorting sorting(mesh, neighbor_query);
+	sorting.sort();
+
+	Region_growing region_growing(faces(mesh), sorting.ordered(), neighbor_query, region_type);
+	std::vector<Region_growing::Primitive_and_region> regions;
+	region_growing.detect(std::back_inserter(regions));
+
+	auto fChartMap = mesh.add_property_map<face_descriptor, int>("f:chart", -1).first;
+	auto fColorMap = mesh.add_property_map<face_descriptor, CGAL::Color>("f:color", CGAL::Color(0, 0, 0)).first;
+	std::unordered_map<int, std::unordered_set<face_descriptor>> partitions;
+	for (int i = 0; i < regions.size(); i++)
+	{
+		auto& region = regions[i].second;
+		auto color = UtilLib::GenerateRandomColor();
+		for (auto f : region)
+		{
+			partitions[i].insert(f);
+			fChartMap[f] = i;
+			fColorMap[f] = color;
+		}
+	}
+	CGAL::IO::write_PLY(TEST_OUTPUT_PATH + "RegionGrowingTest/RegionGrowingClassifyMesh_BeforeMerge.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+
+	std::vector<Region_growing::Item> unassigned;
+	region_growing.unassigned_items(faces(mesh), std::back_inserter(unassigned));
+	std::unordered_set<face_descriptor> unassignedFaces;
+	for (auto f : unassigned)
+	{
+		unassignedFaces.insert(f);
+	}
+	while (!unassignedFaces.empty())
+	{
+		std::unordered_set<face_descriptor> merged;
+		for (auto f : unassignedFaces)
+		{
+			auto h = mesh.halfedge(f);
+			int bestRegion = -1;
+			double bestDot = -1.0;
+			Vector_3 fNormal = CGAL::Polygon_mesh_processing::compute_face_normal(f, mesh);
+			for (auto neighborH : CGAL::halfedges_around_face(h, mesh))
+			{
+				auto neighborFace = mesh.face(mesh.opposite(neighborH));
+				if (neighborFace == Mesh::null_face()) continue;
+				int regionId = fChartMap[neighborFace];
+				if (regionId == -1) continue;
+				auto plane = regions[regionId].first;
+				Vector_3 regionNormal = plane.orthogonal_vector();
+				regionNormal = regionNormal / std::sqrt(regionNormal.squared_length());
+				double dot = std::abs(fNormal * regionNormal);
+				if (dot > bestDot)
+				{
+					bestDot = dot;
+					bestRegion = regionId;
+				}
+			}
+			if (bestRegion != -1)
+			{
+				merged.insert(f);
+				fColorMap[f] = fColorMap[*partitions[bestRegion].begin()];
+				fChartMap[f] = bestRegion;
+				partitions[bestRegion].insert(f);
+			}
+		}
+		for (auto f : merged)
+		{
+			unassignedFaces.erase(f);
+		}
+	}
+
 	return partitions;
 }
 
