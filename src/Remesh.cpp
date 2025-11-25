@@ -1,6 +1,6 @@
 #include "Remesh.h"
 
-
+#include "AlgoDebugIO.h"
 
 //RemeshManager::RemeshManager(Mesh* inMesh) : mesh(inMesh)
 //{
@@ -379,8 +379,9 @@ Mesh Remesh::DoRemesh(Mesh& mesh, const std::unordered_map<int, std::unordered_s
 
 	Mesh wireframeMesh = UtilLib::CreateWireframeMesh(cornerBoundariesMap, mesh);
 	
-	UtilLib::WriteWireframeOBJ(TEST_OUTPUT_PATH + "WireframeOBJ.obj", wireframeMesh);
-	//UtilLib::WriteWireframeOBJ(outputPath + "OriginWireframeOBJ.obj", originalWireframeMesh);
+#ifdef ENABLE_ALGO_DEBUG
+	UtilLib::WriteWireframeOBJ(GAlgoDebugOutputDir + "RemeshResults/WireframeOBJ.obj", wireframeMesh);
+#endif // ENABLE_ALGO_DEBUG
 
 	std::map<vertex_descriptor, vertex_descriptor> v2v;
 	Mesh remeshedMesh;
@@ -421,6 +422,5 @@ Mesh Remesh::DoRemesh(Mesh& mesh, const std::unordered_map<int, std::unordered_s
 			}
 		}
 	}
-	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RemeshTest.obj", remeshedMesh);
 	return remeshedMesh;
 }

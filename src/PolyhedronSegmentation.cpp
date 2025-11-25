@@ -3,6 +3,8 @@
 #include "ExtendedMarchingCube.h"
 #include "Remesh.h"
 
+#include "AlgoDebugIO.h"
+
 #include <windows.h>
 
 //Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<std::shared_ptr<Partition>> parentPartitions): polyhedronMesh(polyhedronMesh)
@@ -25,8 +27,6 @@
 //	}
 //	Remesh();
 //}
-
-
 //PolyhedronSegmentation::PolyhedronSegmentation(PartitionManager* partitionManager, Mesh* mesh) : partitionManager(partitionManager), mesh(mesh)
 //{
 //#pragma region Make Cube Mesh
@@ -54,7 +54,6 @@
 //
 //#pragma endregion
 //}
-
 //Mesh PolyhedronSegmentation::Run(std::string outputPath)
 //{
 //	cubeCenter = UtilLib::GetMeshCenterPoint(cubeMesh);
@@ -303,11 +302,6 @@
 
 Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std::unordered_map<int, std::unordered_set<face_descriptor>>& partitions)
 {
-	boost::filesystem::create_directories(outputPath + "ClipPartitions");
-	boost::filesystem::create_directories(outputPath + "ClipPartitions/OriginalClipPartitions");
-	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useless/");
-	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useful/");
-
 	// Make Cube Mesh
 	#pragma region Make Cube Mesh
 	Point_3 minPoint(UtilLib::INF, UtilLib::INF, UtilLib::INF);
@@ -506,48 +500,46 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 	}
 	else
 	{
+		//openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.3);
+		//CGALMeshAdapter adapter(&mergedMesh, transform);
+		//openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+		//	interrupter,
+		//	adapter,
+		//	*transform,
+		//	3.f,
+		//	3.f
+		//);
+		//voxelMesh = ExtendedMarchingCube::ApplyExtendedMarchingCube(sdfGrid);
+
+		//STARTUPINFO si = { 0 };
+		//si.cb = sizeof(si);
+		//PROCESS_INFORMATION pi;
+
+		//std::string inputMeshPath = outputPath + "../ExtendedMarchingCubeMesh.off";
+		//std::string outputMeshPath = outputPath + "../ExtendedMarchingCubeMesh_fixed.off";
+		//std::string cmd = "MeshFix.exe \"" + inputMeshPath + "\" \"" + outputMeshPath + "\"";
+		////CGAL::IO::write_OFF(inputMeshPath, voxelMesh);
 
 
-		openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.3);
-		CGALMeshAdapter adapter(&mergedMesh, transform);
-		openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
-			interrupter,
-			adapter,
-			*transform,
-			3.f,
-			3.f
-		);
-		voxelMesh = ExtendedMarchingCube::ApplyExtendedMarchingCube(sdfGrid);
-
-		STARTUPINFO si = { 0 };
-		si.cb = sizeof(si);
-		PROCESS_INFORMATION pi;
-
-		std::string inputMeshPath = outputPath + "../ExtendedMarchingCubeMesh.off";
-		std::string outputMeshPath = outputPath + "../ExtendedMarchingCubeMesh_fixed.off";
-		std::string cmd = "MeshFix.exe \"" + inputMeshPath + "\" \"" + outputMeshPath + "\"";
-		//CGAL::IO::write_OFF(inputMeshPath, voxelMesh);
-
-
-		char cmdLine[1024];
-		strcpy_s(cmdLine, cmd.c_str());
-		if (CreateProcess(
-			NULL,        // lpApplicationName 可以为 NULL
-			cmdLine,     // lpCommandLine
-			NULL, NULL, FALSE, 0, NULL, NULL,
-			&si, &pi))
-		{
-			WaitForSingleObject(pi.hProcess, INFINITE);
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-			std::cout << "MeshFix executed successfully" << std::endl;
-		}
-		else
-		{
-			DWORD error = GetLastError();
-			std::cerr << "MeshFix activate fail, error code: " << error << std::endl;
-		}
-		CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(outputMeshPath, fixedMesh);
+		//char cmdLine[1024];
+		//strcpy_s(cmdLine, cmd.c_str());
+		//if (CreateProcess(
+		//	NULL,        // lpApplicationName 可以为 NULL
+		//	cmdLine,     // lpCommandLine
+		//	NULL, NULL, FALSE, 0, NULL, NULL,
+		//	&si, &pi))
+		//{
+		//	WaitForSingleObject(pi.hProcess, INFINITE);
+		//	CloseHandle(pi.hProcess);
+		//	CloseHandle(pi.hThread);
+		//	std::cout << "MeshFix executed successfully" << std::endl;
+		//}
+		//else
+		//{
+		//	DWORD error = GetLastError();
+		//	std::cerr << "MeshFix activate fail, error code: " << error << std::endl;
+		//}
+		//CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(outputMeshPath, fixedMesh);
 	}
 	#pragma endregion
 
@@ -556,11 +548,6 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 
 Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std::vector<RansacPlane>& planes, const std::vector<std::vector<Point_3>>& planePoints)
 {
-	boost::filesystem::create_directories(outputPath + "ClipPartitions");
-	boost::filesystem::create_directories(outputPath + "ClipPartitions/OriginalClipPartitions");
-	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useless/");
-	boost::filesystem::create_directories(outputPath + "IndivisiblePolyhedrons/Useful/");
-
 	// Make Cube Mesh
 #pragma region Make Cube Mesh
 	Point_3 minPoint(UtilLib::INF, UtilLib::INF, UtilLib::INF);
@@ -589,8 +576,12 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		auto& polyhedron = polyhedrons[index];
 		int planeIndex = polyhedron.planeIndices[0];
 		const auto& plane = planes[planeIndex];
-		//CGAL::IO::write_OBJ(outputPath + std::to_string(index) + "_Polyhedron.obj", polyhedron.polyhedronMesh);
-		//CGAL::IO::write_OBJ(outputPath + std::to_string(index) + "_ClipPartition_" + std::to_string(planeIndex) + ".obj", UtilLib::CreatePlaneMesh(plane, CGAL::Polygon_mesh_processing::centroid(polyhedron.polyhedronMesh)));
+
+#ifdef ENABLE_ALGO_DEBUG
+		CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/Progress/" + std::to_string(index) + "_Polyhedron.obj", polyhedron.polyhedronMesh);
+		CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/Progress/" + std::to_string(index) + "_ClipPartition_" + std::to_string(planeIndex) + ".obj", UtilLib::CreatePlaneMesh(plane, CGAL::Polygon_mesh_processing::centroid(polyhedron.polyhedronMesh)));
+#endif // ENABLE_ALGO_DEBUG
+
 		bool bSelfIntersect = CGAL::Polygon_mesh_processing::does_self_intersect(polyhedron.polyhedronMesh);	// Check intersect
 		Mesh belowMesh, aboveMesh;
 		CGAL::copy_face_graph(polyhedron.polyhedronMesh, belowMesh);
@@ -648,7 +639,10 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 
 		if (!intersectionGrid || intersectionGrid->empty())
 		{
-			//::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+#ifdef ENABLE_ALGO_DEBUG
+			CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+#endif // ENABLE_ALGO_DEBUG
+
 			continue;
 		}
 		size_t polyhedronVoxelCount = Voxel::countInteriorVoxels(polyhedronGrid);
@@ -662,15 +656,19 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		double ratio = static_cast<float>(intersectionVoxelCount) / polyhedronVoxelCount;
 		if (ratio > 0.7)
 		{
-			//CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+#ifdef ENABLE_ALGO_DEBUG
+				CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+#endif // ENABLE_ALGO_DEBUG
+
 			usefulPolyhedrons.push_back(index);
 		}
 		else
 		{
-			//CGAL::IO::write_OBJ(outputPath + "IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+#ifdef ENABLE_ALGO_DEBUG
+			CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+#endif // ENABLE_ALGO_DEBUG
 		}
 	}
-
 
 	Mesh mergedMesh;
 	for (size_t i = 0; i < usefulPolyhedrons.size(); i++)
@@ -698,76 +696,41 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 			mergedMesh.add_face(newFace);
 		}
 	}
-	//CGAL::IO::write_OBJ(outputPath + "../MergedMesh.obj", mergedMesh);
+
+#ifdef ENABLE_ALGO_DEBUG
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/MergedMesh.obj", mergedMesh);
+#endif // ENABLE_ALGO_DEBUG
 
 	// Merge polyhedrons
 #pragma region Merge polyhedrons
-	Mesh voxelMesh, fixedMesh;
-	if (true)
-	{
-		openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.3);
-		CGALMeshAdapter adapter(&mergedMesh, transform);
-		openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
-			interrupter,
-			adapter,
-			*transform,
-			3.f,
-			3.f
-		);
-		Mesh voxelMesh = Voxel::volumeToMesh(sdfGrid);
-		size_t removed = CGAL::Polygon_mesh_processing::keep_largest_connected_components(voxelMesh, 1);
-		//CGAL::IO::write_OBJ(outputPath + "../VoxelMesh.obj", voxelMesh);
-		CGAL::Polygon_mesh_processing::triangulate_faces(voxelMesh);
-		//CGAL::IO::write_OBJ(outputPath + "../VoxelMesh_Triangulate.obj", voxelMesh);
-		return voxelMesh;
-	}
-	else
-	{
-		openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.3);
-		CGALMeshAdapter adapter(&mergedMesh, transform);
-		openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
-			interrupter,
-			adapter,
-			*transform,
-			3.f,
-			3.f
-		);
-		voxelMesh = ExtendedMarchingCube::ApplyExtendedMarchingCube(sdfGrid);
+	Mesh voxelMesh;
 
-		STARTUPINFO si = { 0 };
-		si.cb = sizeof(si);
-		PROCESS_INFORMATION pi;
+	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.3);
+	CGALMeshAdapter adapter(&mergedMesh, transform);
+	openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+		interrupter,
+		adapter,
+		*transform,
+		3.f,
+		3.f
+	);
 
-		std::string inputMeshPath = outputPath + "../ExtendedMarchingCubeMesh.off";
-		std::string outputMeshPath = outputPath + "../ExtendedMarchingCubeMesh_fixed.off";
-		std::string cmd = "MeshFix.exe \"" + inputMeshPath + "\" \"" + outputMeshPath + "\"";
-		//CGAL::IO::write_OFF(inputMeshPath, voxelMesh);
+	voxelMesh = Voxel::volumeToMesh(sdfGrid);
+	size_t removed = CGAL::Polygon_mesh_processing::keep_largest_connected_components(voxelMesh, 1);
 
+#ifdef ENABLE_ALGO_DEBUG
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/VoxelMesh.obj", voxelMesh);
+#endif // ENABLE_ALGO_DEBUG
 
-		char cmdLine[1024];
-		strcpy_s(cmdLine, cmd.c_str());
-		if (CreateProcess(
-			NULL,        // lpApplicationName 可以为 NULL
-			cmdLine,     // lpCommandLine
-			NULL, NULL, FALSE, 0, NULL, NULL,
-			&si, &pi))
-		{
-			WaitForSingleObject(pi.hProcess, INFINITE);
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-			std::cout << "MeshFix executed successfully" << std::endl;
-		}
-		else
-		{
-			DWORD error = GetLastError();
-			std::cerr << "MeshFix activate fail, error code: " << error << std::endl;
-		}
-		CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(outputMeshPath, fixedMesh);
-		return fixedMesh;
-	}
+	CGAL::Polygon_mesh_processing::triangulate_faces(voxelMesh);
+
+#ifdef ENABLE_ALGO_DEBUG
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/VoxelMesh_Triangulate.obj", voxelMesh);
+#endif // ENABLE_ALGO_DEBUG
+	
 #pragma endregion
 
-	
+	return voxelMesh;
 }
 
 int SegmentationManager::CreateDividingSurface(const std::pair<int, std::unordered_set<face_descriptor>>& pair)

@@ -1,4 +1,5 @@
 #include "Ransac.h"
+#include "AlgoDebugIO.h"
 
 std::vector<RansacPlane> Ransac::RansacPlanes(const Mesh& mesh, std::vector<std::vector<Point_3>>& planePoints)
 {
@@ -10,7 +11,11 @@ std::vector<RansacPlane> Ransac::RansacPlanes(const Mesh& mesh, std::vector<std:
 std::vector<RansacPlane> Ransac::RansacPlanes(const std::vector<Point_3>& points, std::vector<std::vector<Point_3>>& planePoints)
 {
 	planePoints.clear();
-	//CGAL::IO::write_points(TEST_OUTPUT_PATH + "RANSAC_Test/Points.ply", points);
+
+#ifdef ENABLE_ALGO_DEBUG
+	CGAL::IO::write_points(GAlgoDebugOutputDir + "RansacResults/Points.ply", points);
+#endif // ENABLE_ALGO_DEBUG
+
 	Pwn_vector pwn;
 	pwn.reserve(points.size());
 	for (const auto& p : points)
@@ -41,7 +46,6 @@ std::vector<RansacPlane> Ransac::RansacPlanes(const std::vector<Point_3>& points
 		auto& ransacPlane = ransacPlanes[i];
 		auto indices = ransacPlane.indices_of_assigned_points();
 		Vector_3 sum(0.0, 0.0, 0.0);
-		Mesh planeMesh;
 		planePoints.push_back(std::vector<Point_3>());
 		for (auto idx : indices)
 		{
@@ -51,16 +55,14 @@ std::vector<RansacPlane> Ransac::RansacPlanes(const std::vector<Point_3>& points
 		}
 		Point_3 center = CGAL::ORIGIN + (sum / indices.size());
 		Plane_3 plane = ransacPlane;
+
+#ifdef ENABLE_ALGO_DEBUG
+		Mesh planeMesh;
 		UtilLib::CreatePlaneMesh(plane, center, planeMesh);
-		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "RANSAC_Test/PlaneMesh_" + std::to_string(i) + ".obj", planeMesh);
-		//CGAL::IO::write_points(TEST_OUTPUT_PATH + "RANSAC_Test/PointsMesh_" + std::to_string(i) + ".ply", planePoints[i]);
+		CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "RansacResults/Planes/PlaneMesh_" + std::to_string(i) + ".obj", planeMesh);
+		CGAL::IO::write_points(GAlgoDebugOutputDir + "RansacResults/Planes/PointsMesh_" + std::to_string(i) + ".ply", planePoints[i]);
+#endif // ENABLE_ALGO_DEBUG
+
 	}
-	
-	//auto unassigned = ransac.indices_of_unassigned_points();
-	//std::vector<Point_3> leftover_points;
-	//for (auto idx : unassigned)
-	//{
-	//	leftover_points.push_back(pwn[idx].first);
-	//}
 	return ransacPlanes;
 }

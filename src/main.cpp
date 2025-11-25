@@ -3,6 +3,8 @@
 #include <omp.h>
 //#include <Python.h>
 
+#include "AlgoDebugIO.h"
+
 #include "UtilLib.h"
 #include "CGALTypes.h"
 #include "PolyhedronSegmentation.h"
@@ -119,25 +121,43 @@ int main(int argc, char* argv[])
 //	//remeshManager.Run(outputPath + fileName + "/Remesh/");
 
 
-	std::string inputFile = "../Data/TestData/test6_HoleFill.obj";
-	std::string outputPath = "../Data/Output/";
+
+	std::string inputFile = "";
+	std::string outputPath = "";
 	std::string fileName = "";
 	if (argc > 1)
 	{
 		inputFile = argv[1];
 		outputPath = argv[2];
 	}
+	else
+	{
+		inputFile = "../Data/TestData/test6_HoleFill.obj";
+		outputPath = "../Data/Output/";
+	}
 	{
 		size_t lastSlashPos = inputFile.find_last_of("/\\");
 		size_t lastDotPos = inputFile.find_last_of('.');
 		fileName = inputFile.substr(lastSlashPos + 1, lastDotPos - lastSlashPos - 1);
 	}
+
+#ifdef ENABLE_ALGO_DEBUG
+	SetAlgoDebugOutputDir(outputPath + fileName + "/");
+#endif
+
 	Mesh mesh;
 	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(inputFile, mesh);
 	UtilLib::CentralizeMesh(mesh);
 
+#ifdef ENABLE_ALGO_DEBUG
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "CentralizeMesh.obj", mesh);
+#endif
+
 	Mesh result = MeshReconstruction::DoReconstruction(mesh);
-	CGAL::IO::write_OBJ("D:/DATA/AcademicRelevance/MeshReconstruction/MeshReconstruction/Result.obj", result);
+
+#ifdef ENABLE_ALGO_DEBUG
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "ReconstructionResult.obj", result);
+#endif
 
 	std::cout << "All Done" << std::endl;
 }

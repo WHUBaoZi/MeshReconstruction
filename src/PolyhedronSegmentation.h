@@ -8,8 +8,6 @@
 
 namespace PolyhedronSegmentationFunctions
 {
-	inline std::string outputPath;
-
 	Mesh DoSegmentation(const Mesh& mesh, const std::unordered_map<int, std::unordered_set<face_descriptor>>& partitions);
 
 	Mesh DoSegmentation(const Mesh& mesh, const std::vector<RansacPlane>& planes, const std::vector<std::vector<Point_3>>& planePoints);
