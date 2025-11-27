@@ -3,12 +3,17 @@
 #include "AlgoDebugConfig.h"
 #include <string>
 #include <iostream>
+#include <unordered_map>
 #include <boost/filesystem/operations.hpp>
 
 
 #ifdef ENABLE_ALGO_DEBUG
 
 extern std::string GAlgoDebugOutputDir;
+
+extern std::chrono::steady_clock::time_point start;
+extern std::chrono::steady_clock::time_point end;
+extern std::unordered_map<std::string, long long> timings;
 
 inline void SetAlgoDebugOutputDir(const std::string& dir)
 {
@@ -55,8 +60,20 @@ inline void SetAlgoDebugOutputDir(const std::string& dir)
 #endif
 }
 
+inline long long GetTotalTime()
+{
+    long long time = 0;
+    for (const auto& pair : timings)
+    {
+        time += pair.second;
+    }
+    return time;
+}
+
 #else
 
 inline void SetAlgoDebugOutputDir(const std::string&) {}
+
+inline void GetTotalTime() {}
 
 #endif

@@ -578,6 +578,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		const auto& plane = planes[planeIndex];
 
 #ifdef ENABLE_ALGO_DEBUG
+		std::cout << "Segmentation index is " << index << ", ClipPartition index is " << planeIndex << std::endl;
 		CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/Progress/" + std::to_string(index) + "_Polyhedron.obj", polyhedron.polyhedronMesh);
 		CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/Progress/" + std::to_string(index) + "_ClipPartition_" + std::to_string(planeIndex) + ".obj", UtilLib::CreatePlaneMesh(plane, CGAL::Polygon_mesh_processing::centroid(polyhedron.polyhedronMesh)));
 #endif // ENABLE_ALGO_DEBUG
@@ -601,6 +602,10 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		if (abovePolyhedron.planeIndices.empty()) indivisiblePolyhedrons.push_back(aboveIndex);
 		else polyhedronsQueue.push(aboveIndex);
 	}
+
+#ifdef ENABLE_ALGO_DEBUG
+	std::cout << "Doing Polyhedron Selection and Voxelization..." << std::endl;
+#endif // ENABLE_ALGO_DEBUG
 
 	openvdb::util::NullInterrupter interrupter;
 	openvdb::math::Transform::Ptr transformCheck = openvdb::math::Transform::createLinearTransform(0.1f);
@@ -648,7 +653,6 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		size_t polyhedronVoxelCount = Voxel::countInteriorVoxels(polyhedronGrid);
 		if (polyhedronVoxelCount == 0)
 		{
-			std::cout << "Voxel error" << std::endl;
 			//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ErrorPolyhedronMesh_" + std::to_string(i) + ".obj", polyhedron.polyhedronMesh);
 		}
 		size_t intersectionVoxelCount = Voxel::countInteriorVoxels(intersectionGrid);
@@ -659,7 +663,6 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 #ifdef ENABLE_ALGO_DEBUG
 				CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
 #endif // ENABLE_ALGO_DEBUG
-
 			usefulPolyhedrons.push_back(index);
 		}
 		else
