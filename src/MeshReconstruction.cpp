@@ -14,6 +14,10 @@ CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3>
 	// Centralize Mesh
 	UtilLib::CentralizeMesh(mesh);
 
+#ifdef ENABLE_ALGO_DEBUG
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "CentralizeMesh.obj", mesh);
+#endif
+
 	// Mesh Ransac
 #ifdef ENABLE_ALGO_DEBUG
 	std::cout << "Start Mesh Ransac..." << std::endl;

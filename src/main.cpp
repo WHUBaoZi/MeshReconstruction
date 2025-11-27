@@ -148,11 +148,6 @@ int main(int argc, char* argv[])
 	Mesh mesh;
 	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(inputFile, mesh);
 
-
-#ifdef ENABLE_ALGO_DEBUG
-	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "CentralizeMesh.obj", mesh);
-#endif
-
 	Mesh result = MeshReconstruction::DoReconstruction(mesh);
 
 #ifdef ENABLE_ALGO_DEBUG

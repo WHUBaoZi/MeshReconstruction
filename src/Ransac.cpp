@@ -28,8 +28,8 @@ std::vector<RansacPlane> Ransac::RansacPlanes(const std::vector<Point_3>& points
 	ransac.set_input(pwn);
 	ransac.add_shape_factory<RansacPlane>();
 	Efficient_ransac::Parameters params;
-	params.epsilon = 0.2;
-	params.normal_threshold = 0.98;
+	params.epsilon = 0.5;
+	params.normal_threshold = 0.9;
 	params.min_points = 0.003 * points.size();
 	ransac.detect(params);
 
@@ -62,7 +62,16 @@ std::vector<RansacPlane> Ransac::RansacPlanes(const std::vector<Point_3>& points
 		CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "RansacResults/Planes/PlaneMesh_" + std::to_string(i) + ".obj", planeMesh);
 		CGAL::IO::write_points(GAlgoDebugOutputDir + "RansacResults/Planes/PointsMesh_" + std::to_string(i) + ".ply", planePoints[i]);
 #endif // ENABLE_ALGO_DEBUG
-
 	}
+
+#ifdef ENABLE_ALGO_DEBUG
+	auto unassigned = ransac.indices_of_unassigned_points();
+	std::vector<Point_3> unassignedPoints;
+	for (auto index : unassigned)
+	{
+		unassignedPoints.push_back(points[index]);
+	}
+	CGAL::IO::write_points(GAlgoDebugOutputDir + "RansacResults/UnassignedPoints.ply", unassignedPoints);
+#endif // ENABLE_ALGO_DEBUG
 	return ransacPlanes;
 }

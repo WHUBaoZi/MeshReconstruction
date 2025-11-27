@@ -7,6 +7,8 @@
 
 #include <windows.h>
 
+#include <openvdb/tools/LevelSetFilter.h>
+
 //Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<std::shared_ptr<Partition>> parentPartitions): polyhedronMesh(polyhedronMesh)
 //{
 //	for (auto partition : parentPartitions)
@@ -606,62 +608,17 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 #ifdef ENABLE_ALGO_DEBUG
 	std::cout << "Doing Polyhedron Selection and Voxelization..." << std::endl;
 #endif // ENABLE_ALGO_DEBUG
-
-	openvdb::util::NullInterrupter interrupter;
-	openvdb::math::Transform::Ptr transformCheck = openvdb::math::Transform::createLinearTransform(0.1f);
-	CGALMeshAdapter adapterMesh(&mesh, transformCheck);
-	openvdb::FloatGrid::Ptr meshGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
-		interrupter,
-		adapterMesh,
-		*transformCheck,
-		0.1f,
-		std::numeric_limits<float>::max()
-	);
-
-	Mesh testVolumeMesh = Voxel::volumeToMesh(meshGrid);
-	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "originalVolumeMesh.obj", testVolumeMesh);
-
 	std::vector<int> usefulPolyhedrons;
+	CGAL::Side_of_triangle_mesh<Mesh, Kernel> checkPoint(mesh);
 	for (int i = 0; i < indivisiblePolyhedrons.size(); i++)
 	{
 		int index = indivisiblePolyhedrons[i];
 		auto& polyhedron = polyhedrons[index];
-		CGALMeshAdapter adapterPolyhedron(&polyhedron.polyhedronMesh, transformCheck);
-		openvdb::FloatGrid::Ptr polyhedronGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
-			interrupter,
-			adapterPolyhedron,
-			*transformCheck,
-			1.f,
-			1.f
-		);
-		openvdb::FloatGrid::Ptr intersectionGrid = openvdb::tools::csgIntersectionCopy(*polyhedronGrid, *meshGrid);
-
-		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "PolyhedronMesh.obj", polyhedron.polyhedronMesh);
-		Mesh volumePolyhedronMesh = Voxel::volumeToMesh(polyhedronGrid);
-		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "VolumePolyhedronMesh.obj", volumePolyhedronMesh);
-		Mesh intersectionPolyhedronMesh = Voxel::volumeToMesh(intersectionGrid);
-		//::IO::write_OBJ(TEST_OUTPUT_PATH + "IntersectionPolyhedronMesh.obj", intersectionPolyhedronMesh);
-
-		if (!intersectionGrid || intersectionGrid->empty())
+		Point_3 centroid = CGAL::Polygon_mesh_processing::centroid(polyhedron.polyhedronMesh);
+		if (checkPoint(centroid) == CGAL::ON_BOUNDED_SIDE)
 		{
 #ifdef ENABLE_ALGO_DEBUG
-			CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
-#endif // ENABLE_ALGO_DEBUG
-
-			continue;
-		}
-		size_t polyhedronVoxelCount = Voxel::countInteriorVoxels(polyhedronGrid);
-		if (polyhedronVoxelCount == 0)
-		{
-			//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ErrorPolyhedronMesh_" + std::to_string(i) + ".obj", polyhedron.polyhedronMesh);
-		}
-		size_t intersectionVoxelCount = Voxel::countInteriorVoxels(intersectionGrid);
-
-		double ratio = static_cast<float>(intersectionVoxelCount) / polyhedronVoxelCount;
-		if (ratio > 0.7)
-		{
-#ifdef ENABLE_ALGO_DEBUG
-				CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+			CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
 #endif // ENABLE_ALGO_DEBUG
 			usefulPolyhedrons.push_back(index);
 		}
@@ -672,6 +629,72 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 #endif // ENABLE_ALGO_DEBUG
 		}
 	}
+
+//	openvdb::util::NullInterrupter interrupter;
+//	openvdb::math::Transform::Ptr transformCheck = openvdb::math::Transform::createLinearTransform(0.1f);
+//	CGALMeshAdapter adapterMesh(&mesh, transformCheck);
+//	openvdb::FloatGrid::Ptr meshGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+//		interrupter,
+//		adapterMesh,
+//		*transformCheck,
+//		0.1f,
+//		std::numeric_limits<float>::max()
+//	);
+//
+//	Mesh testVolumeMesh = Voxel::volumeToMesh(meshGrid);
+//	//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "originalVolumeMesh.obj", testVolumeMesh);
+//
+//	std::vector<int> usefulPolyhedrons;
+//	for (int i = 0; i < indivisiblePolyhedrons.size(); i++)
+//	{
+//		int index = indivisiblePolyhedrons[i];
+//		auto& polyhedron = polyhedrons[index];
+//		CGALMeshAdapter adapterPolyhedron(&polyhedron.polyhedronMesh, transformCheck);
+//		openvdb::FloatGrid::Ptr polyhedronGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+//			interrupter,
+//			adapterPolyhedron,
+//			*transformCheck,
+//			1.f,
+//			1.f
+//		);
+//		openvdb::FloatGrid::Ptr intersectionGrid = openvdb::tools::csgIntersectionCopy(*polyhedronGrid, *meshGrid);
+//
+//		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "PolyhedronMesh.obj", polyhedron.polyhedronMesh);
+//		Mesh volumePolyhedronMesh = Voxel::volumeToMesh(polyhedronGrid);
+//		//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "VolumePolyhedronMesh.obj", volumePolyhedronMesh);
+//		Mesh intersectionPolyhedronMesh = Voxel::volumeToMesh(intersectionGrid);
+//		//::IO::write_OBJ(TEST_OUTPUT_PATH + "IntersectionPolyhedronMesh.obj", intersectionPolyhedronMesh);
+//
+//		if (!intersectionGrid || intersectionGrid->empty())
+//		{
+//#ifdef ENABLE_ALGO_DEBUG
+//			CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+//#endif // ENABLE_ALGO_DEBUG
+//
+//			continue;
+//		}
+//		size_t polyhedronVoxelCount = Voxel::countInteriorVoxels(polyhedronGrid);
+//		if (polyhedronVoxelCount == 0)
+//		{
+//			//CGAL::IO::write_OBJ(TEST_OUTPUT_PATH + "ErrorPolyhedronMesh_" + std::to_string(i) + ".obj", polyhedron.polyhedronMesh);
+//		}
+//		size_t intersectionVoxelCount = Voxel::countInteriorVoxels(intersectionGrid);
+//
+//		double ratio = static_cast<float>(intersectionVoxelCount) / polyhedronVoxelCount;
+//		if (ratio > 0.7)
+//		{
+//#ifdef ENABLE_ALGO_DEBUG
+//				CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+//#endif // ENABLE_ALGO_DEBUG
+//			usefulPolyhedrons.push_back(index);
+//		}
+//		else
+//		{
+//#ifdef ENABLE_ALGO_DEBUG
+//			CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useless/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
+//#endif // ENABLE_ALGO_DEBUG
+//		}
+//	}
 
 	Mesh mergedMesh;
 	for (size_t i = 0; i < usefulPolyhedrons.size(); i++)
@@ -707,7 +730,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 	// Merge polyhedrons
 #pragma region Merge polyhedrons
 	Mesh voxelMesh;
-
+	openvdb::util::NullInterrupter interrupter;
 	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.3);
 	CGALMeshAdapter adapter(&mergedMesh, transform);
 	openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
@@ -717,6 +740,17 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		3.f,
 		3.f
 	);
+	float sigma = 1.0f;
+	openvdb::tools::LevelSetFilter<openvdb::FloatGrid> filter(*sdfGrid);
+	//for (int i = 0; i < 3; ++i)
+	//{
+	//	filter.gaussian(1);
+	//}
+	for (int i = 0; i < 2; ++i) 
+	{
+		filter.meanCurvature();
+	}
+	filter.track();
 
 	voxelMesh = Voxel::volumeToMesh(sdfGrid);
 	size_t removed = CGAL::Polygon_mesh_processing::keep_largest_connected_components(voxelMesh, 1);
