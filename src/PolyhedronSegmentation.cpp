@@ -8,6 +8,7 @@
 #include <windows.h>
 
 #include <openvdb/tools/LevelSetFilter.h>
+#include <openvdb/tools/LevelSetMorph.h>
 
 //Polyhedron::Polyhedron(Mesh polyhedronMesh, std::vector<std::shared_ptr<Partition>> parentPartitions): polyhedronMesh(polyhedronMesh)
 //{
@@ -753,7 +754,8 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 #pragma region Merge polyhedrons
 	Mesh voxelMesh;
 	openvdb::util::NullInterrupter interrupter;
-	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(0.3);
+	float voxelSize = 0.3;
+	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(voxelSize);
 	CGALMeshAdapter adapter(&mergedMesh, transform);
 	openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
 		interrupter,
@@ -762,18 +764,24 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		3.f,
 		3.f
 	);
-	float sigma = 1.0f;
+
+#ifdef ENABLE_ALGO_DEBUG
+	voxelMesh = Voxel::volumeToMesh(sdfGrid);
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/VoxelMesh_WithoutErode.obj", voxelMesh);
+#endif // ENABLE_ALGO_DEBUG
+
+
+	// Do Filter and Erode
 	openvdb::tools::LevelSetFilter<openvdb::FloatGrid> filter(*sdfGrid);
-	//for (int i = 0; i < 3; ++i)
-	//{
-	//	filter.gaussian(1);
-	//}
-	for (int i = 0; i < 5; ++i) 
+	float erodeDistance = 2.f * voxelSize;
+	filter.offset(erodeDistance);
+	filter.offset(-1 * erodeDistance);
+	for (int i = 0; i < 5; ++i)
 	{
 		filter.meanCurvature();
 	}
-	filter.track();
 
+	
 	voxelMesh = Voxel::volumeToMesh(sdfGrid);
 	size_t removed = CGAL::Polygon_mesh_processing::keep_largest_connected_components(voxelMesh, 1);
 
