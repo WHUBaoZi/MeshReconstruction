@@ -14,6 +14,7 @@ file(GLOB_RECURSE SRC CONFIGURE_DEPENDS src/*.cpp)
 find_package(OpenVDB REQUIRED)
 find_package(CGAL REQUIRED COMPONENTS Core)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
+find_package(cxxopts CONFIG REQUIRED)
 
 
 add_library(MeshReconstruction SHARED ${SRC})
@@ -35,6 +36,7 @@ target_link_libraries(MeshReconstruction PRIVATE
     CGAL::CGAL_Core
     Boost::filesystem
     Boost::system
+    cxxopts::cxxopts
 )
 
 target_compile_options(MeshReconstructionApp PRIVATE /bigobj)
@@ -49,4 +51,5 @@ target_link_libraries(MeshReconstructionApp PRIVATE
     CGAL::CGAL_Core
     Boost::filesystem
     Boost::system
+    cxxopts::cxxopts
 )

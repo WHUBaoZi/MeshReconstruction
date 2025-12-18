@@ -19,11 +19,13 @@ typedef CGAL::Shape_detection::Efficient_RANSAC_traits
 typedef CGAL::Shape_detection::Efficient_RANSAC<RANSACTraits> Efficient_ransac;
 typedef CGAL::Shape_detection::Plane<RANSACTraits>            RansacPlane;
 
+struct RansacParams;
+
 namespace Ransac
 {
-	std::vector<RansacPlane> RansacPlanes(const Mesh& mesh, std::vector<std::vector<Point_3>>& planePoints);
+	std::vector<RansacPlane> RansacPlanes(const Mesh& mesh, std::vector<std::vector<Point_3>>& planePoints, const RansacParams& params);
 
-	std::vector<RansacPlane> RansacPlanes(const std::vector<Point_3>& points, std::vector<std::vector<Point_3>>& planePoints);
+	std::vector<RansacPlane> RansacPlanes(const std::vector<Point_3>& points, std::vector<std::vector<Point_3>>& planePoints, const RansacParams& params);
 }
 
 

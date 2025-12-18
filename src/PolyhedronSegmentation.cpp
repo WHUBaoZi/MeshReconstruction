@@ -609,13 +609,35 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 	std::cout << "Doing Polyhedron Selection and Voxelization..." << std::endl;
 #endif // ENABLE_ALGO_DEBUG
 	std::vector<int> usefulPolyhedrons;
-	CGAL::Side_of_triangle_mesh<Mesh, Kernel> checkPoint(mesh);
+	Tree tree(mesh.faces_begin(), mesh.faces_end(), mesh);
+	CGAL::Side_of_triangle_mesh<Mesh, Kernel> checkPoint(tree);
 	for (int i = 0; i < indivisiblePolyhedrons.size(); i++)
 	{
 		int index = indivisiblePolyhedrons[i];
 		auto& polyhedron = polyhedrons[index];
 		Point_3 centroid = CGAL::Polygon_mesh_processing::centroid(polyhedron.polyhedronMesh);
+		bool bUseful = false;
 		if (checkPoint(centroid) == CGAL::ON_BOUNDED_SIDE)
+		{
+			Point_3 closest = tree.closest_point(centroid);
+			double distToMesh = std::sqrt(CGAL::squared_distance(centroid, closest));
+			double distToPolyhedron = distToMesh;
+			Tree polyhedronTree(polyhedron.polyhedronMesh.faces_begin(), polyhedron.polyhedronMesh.faces_end(), polyhedron.polyhedronMesh);
+			Vector_3 dir = closest - centroid;
+			dir = dir / std::sqrt(dir.squared_length());
+			Ray_3 ray(centroid, dir);
+			auto intersection = polyhedronTree.first_intersection(ray);
+			if (intersection)
+			{
+				if (std::get_if<Point_3>(&(intersection->first)))
+				{
+					const Point_3* p = std::get_if<Point_3>(&(intersection->first));
+					distToPolyhedron = std::sqrt(CGAL::squared_distance(centroid, *p));
+					if (distToPolyhedron / distToMesh < 1.5) bUseful = true;
+				}
+			}
+		}
+		if (bUseful)
 		{
 #ifdef ENABLE_ALGO_DEBUG
 			CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "SegmentationResults/IndivisiblePolyhedrons/Useful/" + std::to_string(i) + "_IndivisiblePolyhedron.obj", polyhedron.polyhedronMesh);
@@ -746,7 +768,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 	//{
 	//	filter.gaussian(1);
 	//}
-	for (int i = 0; i < 2; ++i) 
+	for (int i = 0; i < 5; ++i) 
 	{
 		filter.meanCurvature();
 	}

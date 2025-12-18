@@ -476,7 +476,7 @@ std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionFunctions:
 	CGAL::Polygon_mesh_processing::isotropic_remeshing(faces(mesh), 0.5, mesh);
 
 #ifdef ENABLE_ALGO_DEBUG
-	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "TempOutput/IsotropicRemeshing.obj", mesh);
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "RemeshResults/IsotropicRemeshing.obj", mesh);
 #endif // ENABLE_ALGO_DEBUG
 
 	Neighbor_query neighbor_query(mesh);
@@ -504,7 +504,7 @@ std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionFunctions:
 	}
 
 #ifdef ENABLE_ALGO_DEBUG
-	CGAL::IO::write_PLY(GAlgoDebugOutputDir + "TempOutput/RegionGrowingClassifyMesh_BeforeMerge.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+	CGAL::IO::write_PLY(GAlgoDebugOutputDir + "RemeshResults/RegionGrowingClassifyMesh_BeforeMerge.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 #endif // ENABLE_ALGO_DEBUG
 
 	std::vector<Region_growing::Item> unassigned;
@@ -554,7 +554,7 @@ std::unordered_map<int, std::unordered_set<face_descriptor>> PartitionFunctions:
 	}
 
 #ifdef ENABLE_ALGO_DEBUG
-	CGAL::IO::write_PLY(GAlgoDebugOutputDir + "TempOutput/RegionGrowingClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
+	CGAL::IO::write_PLY(GAlgoDebugOutputDir + "RemeshResults/RegionGrowingClassifyMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
 #endif // ENABLE_ALGO_DEBUG
 
 	return partitions;

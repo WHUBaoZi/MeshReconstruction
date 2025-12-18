@@ -1,7 +1,8 @@
 #pragma once
 
 #include <omp.h>
-//#include <Python.h>
+
+#include <cxxopts.hpp>
 
 #include "AlgoDebugIO.h"
 
@@ -16,113 +17,7 @@
 
 int main(int argc, char* argv[])
 {
-//	std::chrono::steady_clock::time_point start;
-//	std::chrono::steady_clock::time_point end;
-//	std::vector<std::pair<std::string, long long>> timings;
-//
-//#pragma region Input mesh file & Centralize Mesh
-//	std::string inputFile = "../Data/TestData/test6_HoleFill.obj";
-//	std::string outputPath = "../Data/Output/";
-//	std::string fileName = "";
-//	if (argc > 1)
-//	{
-//		inputFile = argv[1];
-//		outputPath = argv[2];
-//	}
-//	{
-//		size_t lastSlashPos = inputFile.find_last_of("/\\");
-//		size_t lastDotPos = inputFile.find_last_of('.');
-//		fileName = inputFile.substr(lastSlashPos + 1, lastDotPos - lastSlashPos - 1);
-//	}
-//	Mesh mesh;
-//	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(inputFile, mesh);
-//	UtilLib::CentralizeMesh(mesh);
-//	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
-//#pragma endregion
-//
-//	//Mesh testVoxelMesh;
-//	//CGAL::Polygon_mesh_processing::IO::read_polygon_mesh("D:\\DATA\\AcademicRelevance\\MeshReconstruction\\MeshReconstruction\\Data\\Output\\test7_HoleFix\\test7_Modify_Voxel.obj", testVoxelMesh);
-//
-//	//RemeshManager testRemeshManager(&testVoxelMesh);
-//	//testRemeshManager.Run(outputPath + fileName + "/Remesh/");
-//
-//
-////#pragma region Mesh Partition
-////	std::cout << "Start Mesh partition..." << std::endl;
-////	start = std::chrono::high_resolution_clock::now();
-////	//auto partitionFacesMap = MeshPartition(mesh);
-////	// Check Output Path
-////	if (!outputPath.empty() && !boost::filesystem::exists(outputPath))
-////	{
-////		boost::filesystem::create_directories(outputPath);
-////	}
-////	if (!boost::filesystem::exists(outputPath + fileName + "/"))
-////	{
-////		boost::filesystem::create_directories(outputPath + fileName + "/");
-////	}
-////	auto partitions = PartitionFunctions::PartitionByPlanarity(mesh);
-////	auto fColorMap = *mesh.property_map<face_descriptor, CGAL::Color>("f:color");
-////	CGAL::IO::write_PLY(outputPath + fileName + "/" + fileName + "_PartitionMesh.ply", mesh, CGAL::parameters::face_color_map(fColorMap).use_binary_mode(false));
-////	CGAL::IO::write_OBJ(outputPath + fileName + "/" + fileName + "_BuildingMesh.obj", mesh);
-////	end = std::chrono::high_resolution_clock::now();
-////	timings.emplace_back(std::make_pair("Mesh partition", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-////	std::cout << "Mesh partition finished. Time taken: " << timings[0].second << " seconds" << std::endl;
-////#pragma endregion
-////
-////
-////#pragma region Optimize
-////	std::cout << "Start partition optimize..." << std::endl;
-////	start = std::chrono::high_resolution_clock::now();
-////	auto optimizedPartitions = PartitionFunctions::FilterByAreaThreshold(mesh, partitions);
-////	end = std::chrono::high_resolution_clock::now();
-////	timings.emplace_back(std::make_pair("Partition optimize", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-////	std::cout << "Partition optimize finished. Time taken: " << timings[0].second << " seconds" << std::endl;
-////#pragma endregion
-//
-//
-//#pragma region Ransac
-//	// Check Output Path
-//	if (!outputPath.empty() && !boost::filesystem::exists(outputPath))
-//	{
-//		boost::filesystem::create_directories(outputPath);
-//	}
-//	if (!boost::filesystem::exists(outputPath + fileName + "/"))
-//	{
-//		boost::filesystem::create_directories(outputPath + fileName + "/");
-//	}
-//
-//
-//	std::vector<std::vector<Point_3>> planePoints;
-//	std::vector<RansacPlane> planes = Ransac::RansacPlanes(mesh, planePoints);
-//#pragma endregion
-//
-//	PolyhedronSegmentationFunctions::outputPath = outputPath + fileName + "/PolyhedronSegmentation/";
-//	Mesh voxelMesh = PolyhedronSegmentationFunctions::DoSegmentation(mesh, planes, planePoints);
-//
-//	auto partitions = PartitionFunctions::PartitionByRegionGrowing(voxelMesh);
-//	Mesh result = Remesh::DoRemesh(voxelMesh, partitions);
-//	CGAL::IO::write_OBJ(outputPath + fileName + "/ResultMesh.obj", result);
-//
-////#pragma region Polyhedron Segmentation
-////	std::cout << "Start Polyhedron Segmentation..." << std::endl;
-////	start = std::chrono::high_resolution_clock::now();
-////	PolyhedronSegmentationFunctions::outputPath = outputPath + fileName + "/PolyhedronSegmentation/";
-////	Mesh segMesh = PolyhedronSegmentationFunctions::DoSegmentation(mesh, optimizedPartitions);
-////	end = std::chrono::high_resolution_clock::now();
-////	timings.emplace_back(std::make_pair("Polyhedron Segmentation", std::chrono::duration_cast<std::chrono::seconds>(end - start).count()));
-////	std::cout << "Polyhedron Segmentation finished. Time taken: " << timings[2].second << " seconds" << std::endl;
-////#pragma endregion
-////
-////	auto partitionResult = PartitionFunctions::PartitionByNormal(segMesh);
-////	auto refineResult = PartitionFunctions::RefineByAreaThreshold(segMesh, partitionResult, 0.00005);
-////	Remesh::DoRemesh(segMesh, refineResult);
-//
-//	//RemeshManager remeshManager(&voxelMesh);
-//	//remeshManager.Run(outputPath + fileName + "/Remesh/");
-
-
-
-	std::string inputFile = "";
+	/*std::string inputFile = "";
 	std::string outputPath = "";
 	std::string fileName = "";
 	if (argc > 1)
@@ -139,18 +34,88 @@ int main(int argc, char* argv[])
 		size_t lastSlashPos = inputFile.find_last_of("/\\");
 		size_t lastDotPos = inputFile.find_last_of('.');
 		fileName = inputFile.substr(lastSlashPos + 1, lastDotPos - lastSlashPos - 1);
+	}*/
+
+	cxxopts::Options options("MeshReconstructionApp.exe", "Input Building Mesh to Reconstruction");
+	const auto& rp = MeshReconstruction::ransacParams;
+	const std::string epsilon_default_str = std::to_string(rp.epsilon);
+	const std::string normal_threshold_default_str = std::to_string(rp.normal_threshold);
+	const std::string min_points_default_str = std::to_string(rp.min_points_percent);
+	const std::string cluster_epsilon_default_str = std::to_string(rp.cluster_epsilon_percent);
+	options.add_options()
+
+		("i,input",
+			"Input file path (required)",
+			cxxopts::value<std::string>())
+
+		("o,output",
+			"Output directory path (optional, defaults to current directory).",
+			cxxopts::value<std::string>()->default_value("."))
+
+		("e,epsilon",
+			"RANSAC parameter: Maximum Euclidean distance between a point and a shape. "
+			"Expressed in the same unit as input points (default: " + epsilon_default_str + ").",
+			cxxopts::value<double>()->default_value(epsilon_default_str))
+
+		("n,normal-threshold",
+			"RANSAC parameter: Maximum allowed dot product between the estimated shape's normal "
+			"and the point's normal (cosine of the angle). "
+			"For example, cos(25°) = 0.9 (default: " + normal_threshold_default_str + ").",
+			cxxopts::value<double>()->default_value(normal_threshold_default_str))
+
+		("m,min-points",
+			"RANSAC parameter: Minimum number of points required in a shape. "
+			"Expressed as a fraction of the total input points "
+			"(default: " + min_points_default_str + " = "
+			+ std::to_string(rp.min_points_percent * 100.0) + "%).",
+			cxxopts::value<double>()->default_value(min_points_default_str))
+
+		("c,cluster-epsilon",
+			"RANSAC parameter: Maximum Euclidean distance between points considered neighbors. "
+			"Expressed as a fraction of the bounding box diagonal "
+			"(default: " + cluster_epsilon_default_str + " = "
+			+ std::to_string(rp.cluster_epsilon_percent * 100.0) + "%).",
+			cxxopts::value<double>()->default_value(cluster_epsilon_default_str));
+
+	auto result = options.parse(argc, argv);
+
+	if (result.count("help"))
+	{
+		std::cout << options.help() << std::endl;
+		return 0;
 	}
 
+	std::string inputFile;
+	std::string fileName;
+	if (result.count("input"))
+	{
+		inputFile = result["input"].as<std::string>();
+		size_t lastSlashPos = inputFile.find_last_of("/\\");
+		size_t lastDotPos = inputFile.find_last_of('.');
+		fileName = inputFile.substr(lastSlashPos + 1, lastDotPos - lastSlashPos - 1);
+	}	
+	else
+	{
+		std::cerr << "Error: input file is required!" << std::endl;
+		return 1;
+	}
+
+	std::string outputPath = result["output"].as<std::string>();
+	MeshReconstruction::ransacParams.cluster_epsilon_percent = result["epsilon"].as<double>();
+	MeshReconstruction::ransacParams.normal_threshold = result["normal-threshold"].as<double>();
+	MeshReconstruction::ransacParams.min_points_percent = result["min-points"].as<double>();
+	MeshReconstruction::ransacParams.cluster_epsilon_percent = result["cluster-epsilon"].as<double>();
+
 #ifdef ENABLE_ALGO_DEBUG
-	SetAlgoDebugOutputDir(outputPath + fileName + "/");
+	SetAlgoDebugOutputDir(outputPath + fileName);
 #endif
 
 	Mesh mesh;
 	CGAL::Polygon_mesh_processing::IO::read_polygon_mesh(inputFile, mesh);
 
-	Mesh result = MeshReconstruction::DoReconstruction(mesh);
+	Mesh resultMesh = MeshReconstruction::DoReconstruction(mesh);
 
 #ifdef ENABLE_ALGO_DEBUG
-	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "ReconstructionResult.obj", result);
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "ReconstructionResult.obj", resultMesh);
 #endif
 }

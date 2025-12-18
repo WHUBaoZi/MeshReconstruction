@@ -9,6 +9,11 @@
 
 #include "AlgoDebugIO.h"
 
+namespace MeshReconstruction
+{
+	RansacParams ransacParams;
+}
+
 CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3> MeshReconstruction::DoReconstruction(CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3>& mesh)
 {
 	// Centralize Mesh
@@ -24,7 +29,7 @@ CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3>
 	start = std::chrono::high_resolution_clock::now();
 #endif // ENABLE_ALGO_DEBUG
 	std::vector<std::vector<Point_3>> planePoints;
-	std::vector<RansacPlane> planes = Ransac::RansacPlanes(mesh, planePoints);
+	std::vector<RansacPlane> planes = Ransac::RansacPlanes(mesh, planePoints, ransacParams);
 #ifdef ENABLE_ALGO_DEBUG
 	end = std::chrono::high_resolution_clock::now();
 	timings["MeshPartition"] = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();

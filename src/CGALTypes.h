@@ -54,7 +54,7 @@ typedef Kernel::Vector_3 Vector_3;
 typedef Kernel::Direction_3 Direction_3;
 typedef Kernel::Triangle_3 Triangle_3;
 typedef Kernel::Line_3 Line_3;
-typedef Kernel::Ray_3 Ray;
+typedef Kernel::Ray_3 Ray_3;
 
 typedef CGAL::Surface_mesh<Point_3> Mesh;
 typedef CGAL::Polyhedron_3<Kernel> Polyhedron_3;
