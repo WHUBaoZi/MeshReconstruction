@@ -620,7 +620,7 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 		bool bUseful = false;
 		if (checkPoint(centroid) == CGAL::ON_BOUNDED_SIDE)
 		{
-			Point_3 closest = tree.closest_point(centroid);
+			/*Point_3 closest = tree.closest_point(centroid);
 			double distToMesh = std::sqrt(CGAL::squared_distance(centroid, closest));
 			double distToPolyhedron = distToMesh;
 			Tree polyhedronTree(polyhedron.polyhedronMesh.faces_begin(), polyhedron.polyhedronMesh.faces_end(), polyhedron.polyhedronMesh);
@@ -636,7 +636,8 @@ Mesh PolyhedronSegmentationFunctions::DoSegmentation(const Mesh& mesh, const std
 					distToPolyhedron = std::sqrt(CGAL::squared_distance(centroid, *p));
 					if (distToPolyhedron / distToMesh < 1.5) bUseful = true;
 				}
-			}
+			}*/
+			bUseful = true;
 		}
 		if (bUseful)
 		{

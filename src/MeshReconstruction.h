@@ -14,11 +14,11 @@ struct RansacParams
 {
 	double epsilon = 0.1;
 
-	double normal_threshold = 0.95;
+	double normal_threshold = 0.9;
 
-	double min_points_percent = 0.003;
+	double min_points_percent = 0.001;
 
-	double cluster_epsilon_percent = 0.01;
+	double cluster_epsilon_percent = 0.1;
 };
 
 namespace MeshReconstruction

@@ -23,6 +23,37 @@ CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3>
 	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "CentralizeMesh.obj", mesh);
 #endif
 
+	// Prefix
+	openvdb::util::NullInterrupter interrupter;
+	float voxelSize = 0.3;
+	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(voxelSize);
+	CGALMeshAdapter adapter(&mesh, transform);
+	openvdb::FloatGrid::Ptr sdfGrid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
+		interrupter,
+		adapter,
+		*transform,
+		3.f,
+		3.f
+	);
+#ifdef ENABLE_ALGO_DEBUG
+	mesh = Voxel::volumeToMesh(sdfGrid);
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "VoxelMesh_Input.obj", mesh);
+#endif
+	openvdb::tools::LevelSetFilter<openvdb::FloatGrid> filter(*sdfGrid);
+	float erodeDistance = 2.f * voxelSize;
+	filter.offset(erodeDistance);
+	filter.offset(-1 * erodeDistance);
+	for (int i = 0; i < 5; ++i)
+	{
+		filter.meanCurvature();
+	}
+	mesh = Voxel::volumeToMesh(sdfGrid);
+	CGAL::Polygon_mesh_processing::triangulate_faces(mesh);
+#ifdef ENABLE_ALGO_DEBUG
+	CGAL::IO::write_OBJ(GAlgoDebugOutputDir + "VoxelMesh_Input_Filtered.obj", mesh);
+#endif
+
+
 	// Mesh Ransac
 #ifdef ENABLE_ALGO_DEBUG
 	std::cout << "Start Mesh Ransac..." << std::endl;
